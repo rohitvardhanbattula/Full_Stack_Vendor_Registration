@@ -1,0 +1,95 @@
+<mvc:View controllerName="vendorportal.controller.View1"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:fd="sap.f"
+    xmlns:fl="sap.ui.layout.form"
+    xmlns:u="sap.ui.unified"
+    xmlns:core="sap.ui.core">
+
+    <fd:DynamicPage id="dynamicPage" headerExpanded="true">
+        <fd:title>
+            <fd:DynamicPageTitle>
+                <fd:heading>
+                    <Title text="Supplier Management" level="H1"/>
+                </fd:heading>
+                <fd:actions>
+                    <Button text="Show Suppliers" press="onOpenSupplierList" type="Emphasized"/>
+                </fd:actions>
+            </fd:DynamicPageTitle>
+        </fd:title>
+        
+        <fd:content>
+            <VBox class="sapUiSmallMargin">
+
+                <Wizard id="createWizard">
+
+                    <WizardStep id="step1" title="Supplier Details">
+                        <VBox>
+                            <fl:SimpleForm editable="true" layout="ResponsiveGridLayout">
+                                <Label text="Supplier Name"/>
+                                <Input value="{/supplierData/supplierName}" required="true"/>
+                                <Label text="Street"/>
+                                <Input value="{/supplierData/mainAddress/street}"/>
+                                <Label text="Line2"/>
+                                <Input value="{/supplierData/mainAddress/line2}"/>
+                                <Label text="Line3"/>
+                                <Input value="{/supplierData/mainAddress/line3}"/>
+                                <Label text="City"/>
+                                <Input value="{/supplierData/mainAddress/city}"/>
+                                <Label text="PostalCode"/>
+                                <Input value="{/supplierData/mainAddress/postalCode}"/>
+                                <Label text="Country"/>
+                                <Input value="{/supplierData/mainAddress/country}"/>
+                                <Label text="Region"/>
+                                <Input value="{/supplierData/mainAddress/region}"/>
+                            </fl:SimpleForm>
+                        </VBox>
+                    </WizardStep>
+
+                    <WizardStep id="step2" title="Contact Details">
+                        <VBox>
+                            <fl:SimpleForm editable="true">
+                                <Label text="First Name"/>
+                                <Input value="{/supplierData/primaryContact/firstName}"/>
+                                <Label text="Last Name"/>
+                                <Input value="{/supplierData/primaryContact/lastName}"/>
+                                <Label text="Email"/>
+                                <Input value="{/supplierData/primaryContact/email}" type="Email"/>
+                                <Label text="Phone"/>
+                                <Input value="{/supplierData/primaryContact/phone}" type="Tel"/>
+                            </fl:SimpleForm>
+                        </VBox>
+                    </WizardStep>
+
+                    <WizardStep id="step3" title="Category &amp; Additional Info">
+                        <VBox>
+                            <fl:SimpleForm editable="true">
+                                <Label text="Category"/>
+                                <Input value="{/supplierData/categoryAndRegion/category}"/>
+                                <Label text="Region"/>
+                                <Input value="{/supplierData/categoryAndRegion/region}"/>
+                                <Label text="Additional Info"/>
+                                <TextArea value="{/supplierData/additionalInfo/details}" rows="4"/>
+                            </fl:SimpleForm>
+                        </VBox>
+                    </WizardStep>
+
+                    <WizardStep id="step4" title="Upload Attachments">
+                        <VBox>
+                            <u:FileUploader id="fileUploader"
+                                name="file"
+                                uploadOnChange="false"
+                                multiple="true"
+                                change="onFileChange"/>
+                            <Text text="You can upload multiple files. Supported formats: PDF, DOCX, XLSX"/>
+                        </VBox>
+                    </WizardStep>
+                </Wizard>
+
+                <HBox justifyContent="End" class="sapUiSmallMarginTop">
+                    <Button text="Create Supplier" type="Emphasized" press="onSaveSupplier"/>
+                </HBox>
+            </VBox>
+        </fd:content>
+    </fd:DynamicPage>
+</mvc:View>

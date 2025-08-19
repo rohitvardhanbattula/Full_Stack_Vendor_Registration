@@ -1,0 +1,30 @@
+POST http://localhost:4004/odata/v4/supplier/createSupplierWithFiles
+Content-Type: application/json
+
+{
+  "supplierData": {
+    "supplierName": "Medplus Supplies",
+    "mainAddress": {
+      "street": "145 Peachtree Main NW",
+      "line2": "Building 5",
+      "line3": "Suite 210",
+      "city": "Alpharetta",
+      "postalCode": "30022",
+      "country": "United States",
+      "region": "GA"
+    },
+    "primaryContact": {
+      "firstName": "Valerie",
+      "lastName": "Kempiners",
+      "email": "valerie.kempiners@sap.com",
+      "phone": "1234567890"
+    },
+    "categoryAndRegion": {
+      "category": "Medical",
+      "region": "US-East"
+    },
+    "additionalInfo": {
+      "details": "Urgent onboarding with signed NDA and customer-facing role"
+    }
+  }
+}

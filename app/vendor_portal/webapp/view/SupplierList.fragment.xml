@@ -1,0 +1,30 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+  <Dialog id="supplierDialog" title="Suppliers" class="sapUiContentPadding" >
+      <VBox>
+          <Table id="supplierTable" items="{/suppliers}" inset="false">
+              <columns>
+                  <Column><Text text="Name"/></Column>
+                  <Column><Text text="City"/></Column>
+                  <Column><Text text="Contact Email"/></Column>
+                  <Column><Text text="Actions"/></Column>
+              </columns>
+              <items>
+                  <ColumnListItem>
+                      <cells>
+                          <Text text="{supplierName}"/>
+                          <Text text="{mainAddress/city}"/>
+                          <Text text="{primaryContact/email}"/>
+                          <HBox>
+                              <Button text="View" press="onViewSupplier" type="Transparent"/>
+                          </HBox>
+                      </cells>
+                  </ColumnListItem>
+              </items>
+          </Table>
+      </VBox>
+
+      <endButton>
+          <Button text="Close" press="onCloseSupplierList"/>
+      </endButton>
+  </Dialog>
+</core:FragmentDefinition>
