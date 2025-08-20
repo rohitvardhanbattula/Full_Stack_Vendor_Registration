@@ -1,45 +1,113 @@
-<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+<core:FragmentDefinition xmlns="sap.m" xmlns:f="sap.ui.layout.form" xmlns:core="sap.ui.core">
     <Dialog id="supplierDetailsDialog" title="Supplier Details" class="sapUiContentPadding" stretchOnPhone="true">
-        <VBox fitContainer="true" class="sapUiSmallMargin">
-            <Label text="Supplier Information" design="Bold"/>
-            <Text text="Supplier Name: {selectedSupplier>/supplierName}"/>
-            <Text text="Street: {selectedSupplier>/mainAddress/street}"/>
-            <Text text="Line2: {selectedSupplier>/mainAddress/line2}"/>
-            <Text text="Line3: {selectedSupplier>/mainAddress/line3}"/>
-            <Text text="City: {selectedSupplier>/mainAddress/city}"/>
-            <Text text="Postal Code: {selectedSupplier>/mainAddress/postalCode}"/>
-            <Text text="Country: {selectedSupplier>/mainAddress/country}"/>
-            <Text text="Region: {selectedSupplier>/mainAddress/region}"/>
+        <f:Form editable="false">
+            <f:title>
+                <core:Title text="Supplier Overview"/>
+            </f:title>
+            <f:layout>
+                <f:ResponsiveGridLayout
+                    labelSpanXL="4"
+                    labelSpanL="4"
+                    labelSpanM="4"
+                    labelSpanS="12"
+                    columnsXL="2"
+                    columnsL="2"
+                    columnsM="1"
+                    singleContainerFullSize="false"/>
+            </f:layout>
+            <f:formContainers>
 
-            <Label text="Contact Information" design="Bold" class="sapUiSmallMarginTop"/>
-            <Text text="First Name: {selectedSupplier>/primaryContact/firstName}"/>
-            <Text text="Last Name: {selectedSupplier>/primaryContact/lastName}"/>
-            <Text text="Email: {selectedSupplier>/primaryContact/email}"/>
-            <Text text="Phone: {selectedSupplier>/primaryContact/phone}"/>
+                
+                <f:FormContainer title="Supplier Information">
+                    <f:formElements>
+                        <f:FormElement label="Supplier Name">
+                            <f:fields><Text text="{selectedSupplier>/supplierName}"/></f:fields>
+                        </f:FormElement>
+                        <f:FormElement label="Street">
+                            <f:fields><Text text="{selectedSupplier>/mainAddress/street}"/></f:fields>
+                        </f:FormElement>
+                        <f:FormElement label="Line2">
+                            <f:fields><Text text="{selectedSupplier>/mainAddress/line2}"/></f:fields>
+                        </f:FormElement>
+                        <f:FormElement label="Line3">
+                            <f:fields><Text text="{selectedSupplier>/mainAddress/line3}"/></f:fields>
+                        </f:FormElement>
+                        <f:FormElement label="City">
+                            <f:fields><Text text="{selectedSupplier>/mainAddress/city}"/></f:fields>
+                        </f:FormElement>
+                        <f:FormElement label="Postal Code">
+                            <f:fields><Text text="{selectedSupplier>/mainAddress/postalCode}"/></f:fields>
+                        </f:FormElement>
+                        <f:FormElement label="Country">
+                            <f:fields><Text text="{selectedSupplier>/mainAddress/country}"/></f:fields>
+                        </f:FormElement>
+                        <f:FormElement label="Region">
+                            <f:fields><Text text="{selectedSupplier>/mainAddress/region}"/></f:fields>
+                        </f:FormElement>
+                    </f:formElements>
+                </f:FormContainer>
 
-            <Label text="Category &amp; Additional Info" design="Bold" class="sapUiSmallMarginTop"/>
-            <Text text="Category: {selectedSupplier>/categoryAndRegion/category}"/>
-            <Text text="Region: {selectedSupplier>/categoryAndRegion/region}"/>
-            <Text text="Additional Info: {selectedSupplier>/additionalInfo/details}"/>
+                
+                <f:FormContainer title="Contact Information">
+                    <f:formElements>
+                        <f:FormElement label="First Name">
+                            <f:fields><Text text="{selectedSupplier>/primaryContact/firstName}"/></f:fields>
+                        </f:FormElement>
+                        <f:FormElement label="Last Name">
+                            <f:fields><Text text="{selectedSupplier>/primaryContact/lastName}"/></f:fields>
+                        </f:FormElement>
+                        <f:FormElement label="Email">
+                            <f:fields><Text text="{selectedSupplier>/primaryContact/email}"/></f:fields>
+                        </f:FormElement>
+                        <f:FormElement label="Phone">
+                            <f:fields><Text text="{selectedSupplier>/primaryContact/phone}"/></f:fields>
+                        </f:FormElement>
+                    </f:formElements>
+                </f:FormContainer>
 
-            <Label text="Attachments" design="Bold" class="sapUiSmallMarginTop"/>
-            <Table id="attachmentsTable" items="{selectedSupplier>/attachments}" inset="false">
-                <columns>
-                    <Column><Text text="File Name"/></Column>
-                    <Column><Text text="Mime Type"/></Column>
-                    <Column><Text text="Actions"/></Column>
-                </columns>
-                <items>
-                    <ColumnListItem>
-                        <cells>
-                            <Text text="{selectedSupplier>fileName}"/>
-                            <Text text="{selectedSupplier>mimeType}"/>
-                            <Button text="Download" press="onDownloadAttachment"/>
-                        </cells>
-                    </ColumnListItem>
-                </items>
-            </Table>
-        </VBox>
+                
+                <f:FormContainer title="Category &amp; Additional Info">
+                    <f:formElements>
+                        <f:FormElement label="Category">
+                            <f:fields><Text text="{selectedSupplier>/categoryAndRegion/category}"/></f:fields>
+                        </f:FormElement>
+                        <f:FormElement label="Region">
+                            <f:fields><Text text="{selectedSupplier>/categoryAndRegion/region}"/></f:fields>
+                        </f:FormElement>
+                        <f:FormElement label="Additional Info">
+                            <f:fields><Text text="{selectedSupplier>/additionalInfo/details}"/></f:fields>
+                        </f:FormElement>
+                    </f:formElements>
+                </f:FormContainer>
+
+                
+                <f:FormContainer title="Attachments">
+                    <f:formElements>
+                        <f:FormElement>
+                            <f:fields>
+                                <Table id="attachmentsTable" inset="false" items="{attachmentsModel>/attachments}">
+                                    <columns>
+                                        <Column><Text text="File Name"/></Column>
+                                        <Column><Text text="Mime Type"/></Column>
+                                        <Column><Text text="Actions"/></Column>
+                                    </columns>
+                                    <items>
+                                        <ColumnListItem>
+                                            <cells>
+                                                <Text text="{attachmentsModel>fileName}"/>
+                                                <Text text="{attachmentsModel>mimeType}"/>
+                                                <Button text="Download" press="onDownloadAttachment"/>
+                                            </cells>
+                                        </ColumnListItem>
+                                    </items>
+                                </Table>
+                            </f:fields>
+                        </f:FormElement>
+                    </f:formElements>
+                </f:FormContainer>
+
+            </f:formContainers>
+        </f:Form>
 
         <endButton>
             <Button text="Close" press="onCloseSupplierDetails"/>

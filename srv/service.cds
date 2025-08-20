@@ -1,10 +1,9 @@
-
 type SupplierInput {
-    supplierName     : String(200);
-    mainAddress      : AddressInput;
-    primaryContact   : ContactInput;
-    categoryAndRegion: CategoryRegionInput;
-    additionalInfo   : AdditionalInfoInput;
+    supplierName      : String(200);
+    mainAddress       : AddressInput;
+    primaryContact    : ContactInput;
+    categoryAndRegion : CategoryRegionInput;
+    additionalInfo    : AdditionalInfoInput;
 }
 
 type AddressInput {
@@ -25,25 +24,23 @@ type ContactInput {
 }
 
 type CategoryRegionInput {
-    category     : String(100);
-    region       : String(100);
+    category : String(100);
+    region   : String(100);
 }
 
 type AdditionalInfoInput {
-    details: String(100);
+    details : String(100);
 }
+
 service SupplierService {
 
-    function getsuppliers() returns array of SupplierInput;
+    function getsuppliers()                                       returns array of SupplierInput;
 
-    action createSupplierWithFiles(
-        supplierData : SupplierInput
-    ) returns String;
+    action   createSupplierWithFiles(supplierData: SupplierInput) returns String;
 
-     action downloadAttachments(supplierName : String) returns array of {
-    fileName : String;
-    mimeType : String;
-    content  : LargeBinary;
-  };
+    function downloadAttachments(supplierName: String)            returns array of {
+        fileName : String;
+        mimeType : String;
+        content  : LargeBinary;
+    };
 }
-
