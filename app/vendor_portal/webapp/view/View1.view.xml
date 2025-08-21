@@ -50,11 +50,11 @@
                         <VBox>
                             <fl:SimpleForm editable="true">
                                 <Label text="First Name"/>
-                                <Input value="{/supplierData/primaryContact/firstName}"/>
+                                <Input value="{/supplierData/primaryContact/firstName}"  required="true"/>
                                 <Label text="Last Name"/>
                                 <Input value="{/supplierData/primaryContact/lastName}"/>
                                 <Label text="Email"/>
-                                <Input value="{/supplierData/primaryContact/email}" type="Email"/>
+                                <Input value="{/supplierData/primaryContact/email}" type="Email"  required="true"/>
                                 <Label text="Phone"/>
                                 <Input value="{/supplierData/primaryContact/phone}" type="Tel"/>
                             </fl:SimpleForm>
@@ -65,7 +65,7 @@
                         <VBox>
                             <fl:SimpleForm editable="true">
                                 <Label text="Category"/>
-                                <Input value="{/supplierData/categoryAndRegion/category}"/>
+                                <Input value="{/supplierData/categoryAndRegion/category}" required="true"/>
                                 <Label text="Region"/>
                                 <Input value="{/supplierData/categoryAndRegion/region}"/>
                                 <Label text="Additional Info"/>
