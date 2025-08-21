@@ -8,7 +8,10 @@ sap.ui.define([
     "use strict";
 
     return Controller.extend("vendorportal.controller.View1", {
-
+        getURL: function()
+        {
+            return sap.ui.require.toUrl("vendorportal");
+        },
         onInit: function () {
             const oModel = new JSONModel({
                 supplierData: {
@@ -25,7 +28,8 @@ sap.ui.define([
         },
 
         getSuppliers: function () {
-            fetch("/odata/v4/supplier/getsuppliers")
+            var s= this.getURL() + `/odata/v4/supplier/getsuppliers`;
+            fetch(s)
                 .then(res => res.json())
                 .then(data => {
                     this.getView().getModel().setProperty("/suppliers", Array.isArray(data.value) ? data.value : data);
@@ -47,7 +51,7 @@ sap.ui.define([
                 return;
             }
 
-            fetch("/odata/v4/supplier/createSupplierWithFiles", {
+            fetch(this.getURL() +"/odata/v4/supplier/createSupplierWithFiles", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ supplierData: oData })
@@ -117,7 +121,7 @@ sap.ui.define([
         },
 
         _fetchSuppliers: function () {
-            fetch("/odata/v4/supplier/getsuppliers")
+            fetch(this.getURL() +"/odata/v4/supplier/getsuppliers")
                 .then(res => res.json())
                 .then(data => {
                     const suppliers = Array.isArray(data.value) ? data.value : data;
@@ -156,7 +160,7 @@ sap.ui.define([
         },
 
         _loadAttachments: function (supplierName) {
-            fetch(`/odata/v4/supplier/downloadAttachments(supplierName='${encodeURIComponent(supplierName)}')`)
+            fetch(this.getURL() +`/odata/v4/supplier/downloadAttachments(supplierName='${encodeURIComponent(supplierName)}')`)
                 .then(res => res.json())
                 .then(data => {
                     const files = Array.isArray(data) ? data : data.value || [];
