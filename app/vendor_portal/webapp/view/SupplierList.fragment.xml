@@ -7,6 +7,7 @@
                   <Column><Text text="City"/></Column>
                   <Column><Text text="Contact Email"/></Column>
                   <Column><Text text="Actions"/></Column>
+                  <Column><Text text="Status"/></Column>
               </columns>
               <items>
                   <ColumnListItem>
@@ -16,6 +17,9 @@
                           <Text text="{primaryContact/email}"/>
                           <HBox>
                               <Button text="View" press="onViewSupplier" type="Transparent"/>
+                          </HBox>
+                          <HBox>
+                              <Button text="View" press="onViewStatus" type="Transparent"/>
                           </HBox>
                       </cells>
                   </ColumnListItem>
