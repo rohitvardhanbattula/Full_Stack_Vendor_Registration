@@ -25,7 +25,7 @@ sap.ui.define([
         },
 
         getSuppliers: function () {
-            fetch("/odata/v4/supplier/getsuppliers")
+            fetch("odata/v4/supplier/getsuppliers")
                 .then(res => res.json())
                 .then(data => {
                     this.getView().getModel().setProperty("/suppliers", Array.isArray(data.value) ? data.value : data);
@@ -47,14 +47,14 @@ sap.ui.define([
                 return;
             }
 
-            fetch("/odata/v4/supplier/createSupplierWithFiles", {
+            fetch("odata/v4/supplier/createSupplierWithFiles", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ supplierData: oData })
             })
-                .then(res => res.json()) 
+                .then(res => res.json())
                 .then(result => {
-                    MessageToast.show(result.value);   
+                    MessageToast.show(result.value);
 
                     if (this._files && this._files.length > 0) {
                         Array.from(this._files).forEach(file => {
@@ -70,10 +70,10 @@ sap.ui.define([
                     this.getSuppliers();
                     this._resetForm();
                     const oWizard = this.byId("createWizard");
-            if (oWizard) {
-                const oFirstStep = this.byId("step1");
-                oWizard.discardProgress(oFirstStep); 
-            }
+                    if (oWizard) {
+                        const oFirstStep = this.byId("step1");
+                        oWizard.discardProgress(oFirstStep);
+                    }
                 })
                 .catch(err => {
                     MessageBox.error("Error saving supplier: " + err.message);
@@ -117,7 +117,7 @@ sap.ui.define([
         },
 
         _fetchSuppliers: function () {
-            fetch("/odata/v4/supplier/getsuppliers")
+            fetch("odata/v4/supplier/getsuppliers")
                 .then(res => res.json())
                 .then(data => {
                     const suppliers = Array.isArray(data.value) ? data.value : data;
@@ -156,7 +156,7 @@ sap.ui.define([
         },
 
         _loadAttachments: function (supplierName) {
-            fetch(`/odata/v4/supplier/downloadAttachments(supplierName='${encodeURIComponent(supplierName)}')`)
+            fetch(`odata/v4/supplier/downloadAttachments(supplierName='${encodeURIComponent(supplierName)}')`)
                 .then(res => res.json())
                 .then(data => {
                     const files = Array.isArray(data) ? data : data.value || [];
@@ -201,32 +201,32 @@ sap.ui.define([
             return new Blob(byteArrays, { type: contentType });
         },
         onViewStatus: function (oEvent) {
-    const oSupplier = oEvent.getSource().getBindingContext().getObject();
-    const oView = this.getView();
+            const oSupplier = oEvent.getSource().getBindingContext().getObject();
+            const oView = this.getView();
 
-    if (!this._oSupplierStatusDialog) {
-        Fragment.load({
-            id: oView.getId(),
-            name: "vendorportal.view.SupplierStatus",
-            controller: this
-        }).then(oDialog => {
-            this._oSupplierStatusDialog = oDialog;
-            oView.addDependent(this._oSupplierStatusDialog);
+            if (!this._oSupplierStatusDialog) {
+                Fragment.load({
+                    id: oView.getId(),
+                    name: "vendorportal.view.SupplierStatus",
+                    controller: this
+                }).then(oDialog => {
+                    this._oSupplierStatusDialog = oDialog;
+                    oView.addDependent(this._oSupplierStatusDialog);
 
-            
 
-            this._oSupplierStatusDialog.open();
-        });
-    } else {
-        this._oSupplierStatusDialog.open();
-    }
-},
 
-onCloseSupplierStatus: function () {
-    if (this._oSupplierStatusDialog) {
-        this._oSupplierStatusDialog.close();
-    }
-}
+                    this._oSupplierStatusDialog.open();
+                });
+            } else {
+                this._oSupplierStatusDialog.open();
+            }
+        },
+
+        onCloseSupplierStatus: function () {
+            if (this._oSupplierStatusDialog) {
+                this._oSupplierStatusDialog.close();
+            }
+        }
 
     });
 });

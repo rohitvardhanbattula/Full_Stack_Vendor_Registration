@@ -9,18 +9,28 @@
     "@cap-js/hana": "^2.1.2",
     "@sap/cds": "^9.2.0",
     "@sap/cds-dk": "^9.2.0",
+    "@sap/xsenv": "^5.4.0",
+    "@sap/xssec": "^4",
     "express": "^4",
-    "express-fileupload": "^1.5.2"
+    "express-fileupload": "^1.5.2",
+    "uninstall": "^0.0.0",
+    "update": "^0.7.4"
   },
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
     "@cap-js/cds-types": "^0.13.0",
-    "@cap-js/sqlite": "^2"
+    "@cap-js/sqlite": "^2",
+    "@sap/cds-dk": "^9.2.0",
+    "mbt": "^1.2.29",
+    "rimraf": "^5.0.5"
   },
   "scripts": {
     "start": "cds-serve",
-    "watch-vendor_portal": "cds watch --open vendor_portal/webapp/index.html?sap-ui-xx-viewCache=false"
+    "watch-vendor_portal": "cds watch --open vendor_portal/webapp/index.html?sap-ui-xx-viewCache=false",
+    "undeploy": "cf undeploy VendorPortal --delete-services --delete-service-keys --delete-service-brokers",
+    "build": "rimraf resources mta_archives && mbt build --mtar archive",
+    "deploy": "cf deploy mta_archives/archive.mtar --retries 1"
   }
 }

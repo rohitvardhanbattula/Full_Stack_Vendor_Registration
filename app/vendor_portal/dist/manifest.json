@@ -3,7 +3,12 @@
   "sap.app": {
     "id": "vendorportal",
     "type": "application",
-    "i18n": "i18n/i18n.properties",
+    "i18n": {
+      "bundleUrl": "i18n/i18n.properties",
+      "supportedLocales": [
+        ""
+      ]
+    },
     "applicationVersion": {
       "version": "0.0.1"
     },
@@ -72,7 +77,10 @@
       "i18n": {
         "type": "sap.ui.model.resource.ResourceModel",
         "settings": {
-          "bundleName": "vendorportal.i18n.i18n"
+          "bundleName": "vendorportal.i18n.i18n",
+          "supportedLocales": [
+            ""
+          ]
         }
       },
       "": {
