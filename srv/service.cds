@@ -1,3 +1,10 @@
+type approverinput {
+    name    : String(100);
+    email   : String(200);
+    country : String(50);
+    level   : Integer;
+}
+
 type SupplierInput {
     supplierName      : String(200);
     mainAddress       : AddressInput;
@@ -35,7 +42,9 @@ type AdditionalInfoInput {
 service SupplierService {
 
     function getsuppliers()                                       returns array of SupplierInput;
+    function Approvers()                                          returns array of approverinput;
 
+    action   approverentry(approverentry: approverinput)          returns String;
     action   createSupplierWithFiles(supplierData: SupplierInput) returns String;
 
     function downloadAttachments(supplierName: String)            returns array of {

@@ -1,6 +1,6 @@
 namespace my.supplier;
 
-using {cuid} from '@sap/cds/common';
+using { cuid } from '@sap/cds/common';
 
 entity Supplier : cuid {
     key supplierName      : String(200) @cds.persistence.unique;
@@ -23,9 +23,9 @@ entity Address : cuid {
 }
 
 entity Contact : cuid {
-     firstName : String(100);
-     lastName  : String(100);
-     email     : String(200);
+    firstName : String(100);
+    lastName  : String(100);
+    email     : String(200);
     phone     : String(50);
 }
 
@@ -39,10 +39,29 @@ entity AdditionalInfo : cuid {
 }
 
 entity Attachment : cuid {
-        supplier     : Association to Supplier;
-        supplierName : String;
-    key fileName     : String(255);
-        mimeType     : String(100);
-        content      : LargeString;
-        uploadedAt   : Timestamp;
+    supplier     : Association to Supplier;
+    supplierName : String;
+    key fileName : String(255);
+    mimeType     : String(100);
+    content      : LargeString;
+    uploadedAt   : Timestamp;
+}
+
+entity Approver : cuid {
+    name        : String(100);
+    email       : String(200);
+    country        : String(50);
+    level: Integer;
+}
+
+entity ApproverComment : cuid {
+    approver   : Association to Approver;
+    supplier   : Association to Supplier on supplier.supplierName=sup_name;
+    sup_name : String(100);
+    level: String;
+    name        : String(100);
+    email       : String(200);
+    status      : String(30);
+    comment    : String(1000);
+    createdAt  : Timestamp;
 }

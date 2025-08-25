@@ -28,6 +28,11 @@ app.post('/uploadattachments', async (req, res) => {
   }
 });
 
+
+
+
+
+
 module.exports = cds.service.impl(function () {
   this.on('getsuppliers', async (req) => {
     try {
@@ -73,11 +78,60 @@ module.exports = cds.service.impl(function () {
         additionalInfo_ID: addInfoId
       });
 
+      const approversList = await SELECT.from('my.supplier.Approver').orderBy('level').where({ Country: supplierData.mainAddress.country });
+
+      const approvalEntries = approversList.map(approver => ({
+        sup_name: supplierData.supplierName,
+        level: approver.level,
+        email: approver.email,
+        name: approver.name,
+        status: 'PENDING',
+        updatedAt: new Date().toISOString()
+      }));
+
+      if (approvalEntries.length) {
+        await INSERT.into('my.supplier.ApproverComment').entries(approvalEntries);
+      }
+
+
       return `Supplier ${supplierData.supplierName} created successfully`;
     } catch (err) {
       req.error(500, 'Error creating supplier: ' + err.message);
     }
   });
+
+  this.on("Approvers", async (req) => {
+    try {
+      return await cds.run(
+        SELECT.from('my.supplier.Approver')
+      );
+    } catch (e) {
+      return req.error(500, 'Error fetching approvers: ' + e.message);
+    }
+  });
+  this.on("approverentry", async (req) => {
+    try {
+      const { approverentry } = req.data;
+
+      const { level, country } = approverentry;
+
+
+      const exists = await SELECT.one.from("my.supplier.Approver")
+        .where({ level: level, country: country });
+
+      if (exists) {
+        return `Approver already exists for Level ${level} and Country ${country}`;
+      }
+
+
+      await INSERT.into("my.supplier.Approver").entries(approverentry);
+
+      return `Approver entry inserted successfully for Level ${level}, country ${country}`;
+    } catch (e) {
+      return req.error(500, "Error inserting approver entry: " + e.message);
+    }
+  });
+
 
   this.on("downloadAttachments", async (req) => {
     const { supplierName } = req.data;
