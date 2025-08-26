@@ -132,6 +132,15 @@ module.exports = cds.service.impl(function () {
     }
   });
 
+  this.on('Approvals', async (req) => {
+    const { suppliername } = req.data;
+    if (!suppliername) return "Not found";
+    const approvals = await SELECT.from('my.supplier.ApproverComment')
+      .columns('level', 'status', 'comment', 'email','name')
+      .where({ sup_name: suppliername });
+
+    return approvals;
+  });
 
   this.on("downloadAttachments", async (req) => {
     const { supplierName } = req.data;

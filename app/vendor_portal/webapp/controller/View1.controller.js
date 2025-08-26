@@ -204,26 +204,45 @@ sap.ui.define([
             return new Blob(byteArrays, { type: contentType });
         },
         onViewStatus: function (oEvent) {
-            const oSupplier = oEvent.getSource().getBindingContext().getObject();
-            const oView = this.getView();
+    const oSupplier = oEvent.getSource().getBindingContext().getObject();
+    const oView = this.getView();
+            
+    // Call backend to get status
+    fetch(`/odata/v4/supplier/Approvals?suppliername=${oSupplier.supplierName}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Failed to fetch supplier status");
+            }
+            return response.json();
+        })
+        .then(data => {
+            // OData V4 response -> usually data.value
+            const aStatus = data.value || [];
 
+            // Create JSONModel and set to View
+            const oStatusModel = new sap.ui.model.json.JSONModel({ status: aStatus });
+            oView.setModel(oStatusModel, "statusModel");
+
+            // Now open the dialog
             if (!this._oSupplierStatusDialog) {
-                Fragment.load({
+                sap.ui.core.Fragment.load({
                     id: oView.getId(),
                     name: "vendorportal.view.SupplierStatus",
                     controller: this
                 }).then(oDialog => {
                     this._oSupplierStatusDialog = oDialog;
                     oView.addDependent(this._oSupplierStatusDialog);
-
-
-
                     this._oSupplierStatusDialog.open();
                 });
             } else {
                 this._oSupplierStatusDialog.open();
             }
-        },
+        })
+        .catch(err => {
+            sap.m.MessageToast.show("Error: " + err.message);
+        });
+},
+
 
         onCloseSupplierStatus: function () {
             if (this._oSupplierStatusDialog) {
@@ -259,7 +278,7 @@ sap.ui.define([
         },
         onCreateApprover: function () {
             var oView = this.getView();
-            
+
             if (!this.byId("createApproverDialog")) {
                 Fragment.load({
                     id: oView.getId(),

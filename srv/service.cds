@@ -52,4 +52,12 @@ service SupplierService {
         mimeType : String;
         content  : LargeBinary;
     };
+
+    function Approvals(suppliername : String)                          returns array of {
+    level : String;
+    email  : String;
+    name: String;
+    status : String;
+    comment: String;
+  };
 }
