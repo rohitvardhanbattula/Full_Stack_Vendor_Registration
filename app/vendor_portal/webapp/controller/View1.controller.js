@@ -259,7 +259,7 @@ sap.ui.define([
         },
         onCreateApprover: function () {
             var oView = this.getView();
-
+            
             if (!this.byId("createApproverDialog")) {
                 Fragment.load({
                     id: oView.getId(),
@@ -276,46 +276,46 @@ sap.ui.define([
 
         // Save new approver
         onSaveApprover: async function () {
-    try {
-        const level = this.byId("inputLevel").getValue();
-        
-        const country = this.byId("inputCountry").getValue();
-        const name = this.byId("inputName").getValue();
-        const email = this.byId("inputEmail").getValue();
+            try {
+                const level = this.byId("inputLevel").getValue();
 
-        if (!level || !country || !name || !email) {
-            MessageBox.warning("Please fill all required fields.");
-            return;
-        }
+                const country = this.byId("inputCountry").getValue();
+                const name = this.byId("inputName").getValue();
+                const email = this.byId("inputEmail").getValue();
 
-        const body = {
-            approverentry: {
-                level: level,
-                country: country,
-                name: name,
-                email: email
+                if (!level || !country || !name || !email) {
+                    MessageBox.warning("Please fill all required fields.");
+                    return;
+                }
+
+                const body = {
+                    approverentry: {
+                        level: level,
+                        country: country,
+                        name: name,
+                        email: email
+                    }
+                };
+
+                const response = await fetch("/odata/v4/supplier/approverentry", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(body)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    MessageToast.show(result.value);
+                    this.byId("createApproverDialog").close(); // ✅ consistent
+                } else {
+                    MessageBox.error(result.error?.message || "Failed to insert approver");
+                }
+            } catch (e) {
+                MessageBox.error("Error: " + e.message);
             }
-        };
-
-        const response = await fetch("/odata/v4/supplier/approverentry", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body)
-        });
-
-        const result = await response.json();
-
-        if (response.ok) {
-            MessageToast.show(result.value);
-            this.byId("createApproverDialog").close(); // ✅ consistent
-        } else {
-            MessageBox.error(result.error?.message || "Failed to insert approver");
         }
-    } catch (e) {
-        MessageBox.error("Error: " + e.message);
-    }
-}
-,
+        ,
 
         // Cancel creation
         onCancelApprover: function () {

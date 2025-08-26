@@ -10,8 +10,8 @@
       "csrfProtection": false
     },
     {
-      "source": "^/uploadattachments/(.*)$",
-      "target": "/uploadattachments/$1",
+      "source": "^/uploadattachments$",
+      "target": "/uploadattachments",
       "destination": "srv-api",
       "authenticationType": "xsuaa",
       "csrfProtection": false
