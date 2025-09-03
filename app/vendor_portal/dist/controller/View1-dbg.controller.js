@@ -50,7 +50,7 @@ sap.ui.define([
                 return;
             }
 
-            fetch(this.getURL() +`/odata/v4/supplier/createSupplierWithFiles`, {
+            fetch(this.getURL() + `/odata/v4/supplier/createSupplierWithFiles`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ supplierData: oData })
@@ -65,7 +65,7 @@ sap.ui.define([
                             formData.append("file", file);
                             formData.append("supplierName", oData.supplierName);
 
-                            fetch(this.getURL() + `/uploadattachments`, { method: "POST", body: formData })
+                            fetch(this.getURL()+ `/uploadattachments`, { method: "POST", body: formData })
                                 .catch(err => MessageBox.error("File upload error: " + err.message));
                         });
                     }
@@ -206,30 +206,136 @@ sap.ui.define([
         onViewStatus: function (oEvent) {
             const oSupplier = oEvent.getSource().getBindingContext().getObject();
             const oView = this.getView();
+            fetch(this.getURL() +`/odata/v4/supplier/Approvals?suppliername=${oSupplier.supplierName}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Failed to fetch supplier status");
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const aStatus = data.value || [];
 
-            if (!this._oSupplierStatusDialog) {
-                Fragment.load({
-                    id: oView.getId(),
-                    name: "vendorportal.view.SupplierStatus",
-                    controller: this
-                }).then(oDialog => {
-                    this._oSupplierStatusDialog = oDialog;
-                    oView.addDependent(this._oSupplierStatusDialog);
+                    const oStatusModel = new sap.ui.model.json.JSONModel({ status: aStatus });
+                    oView.setModel(oStatusModel, "statusModel");
 
-
-
-                    this._oSupplierStatusDialog.open();
+                    if (!this._oSupplierStatusDialog) {
+                        sap.ui.core.Fragment.load({
+                            id: oView.getId(),
+                            name: "vendorportal.view.SupplierStatus",
+                            controller: this
+                        }).then(oDialog => {
+                            this._oSupplierStatusDialog = oDialog;
+                            oView.addDependent(this._oSupplierStatusDialog);
+                            this._oSupplierStatusDialog.open();
+                        });
+                    } else {
+                        this._oSupplierStatusDialog.open();
+                    }
+                })
+                .catch(err => {
+                    sap.m.MessageToast.show("Error: " + err.message);
                 });
-            } else {
-                this._oSupplierStatusDialog.open();
-            }
         },
+
 
         onCloseSupplierStatus: function () {
             if (this._oSupplierStatusDialog) {
                 this._oSupplierStatusDialog.close();
             }
+        },
+        onOpenApproverList: async function () {
+            var oView = this.getView();
+
+            if (!this._oApproverDialog) {
+                this._oApproverDialog = await Fragment.load({
+                    id: oView.getId(),
+                    name: "vendorportal.view.ApproverList",
+                    controller: this
+                });
+                oView.addDependent(this._oApproverDialog);
+            }
+            fetch(this.getURL() + `/odata/v4/supplier/Approvers`)
+                .then(res => res.json())
+                .then(data => {
+                    const approvers = Array.isArray(data.value) ? data.value : data;
+                    this.getView().getModel().setProperty("/approvers", approvers);
+                })
+                .catch(err => { MessageBox.error("Error fetching suppliers: " + err.message); });
+
+            this._oApproverDialog.open();
+        },
+
+        onCloseApproverList: function () {
+            if (this._oApproverDialog) {
+                this._oApproverDialog.close();
+            }
+        },
+        onCreateApprover: function () {
+            var oView = this.getView();
+
+            if (!this.byId("createApproverDialog")) {
+                Fragment.load({
+                    id: oView.getId(),
+                    name: "vendorportal.view.CreateApprover",
+                    controller: this
+                }).then(function (oDialog) {
+                    oView.addDependent(oDialog);
+                    oDialog.open();
+                });
+            } else {
+                this.byId("createApproverDialog").open();
+            }
+        },
+
+        // Save new approver
+        onSaveApprover: async function () {
+            try {
+                const level = this.byId("inputLevel").getValue();
+
+                const country = this.byId("inputCountry").getValue();
+                const name = this.byId("inputName").getValue();
+                const email = this.byId("inputEmail").getValue();
+
+                if (!level || !country || !name || !email) {
+                    MessageBox.warning("Please fill all required fields.");
+                    return;
+                }
+
+                const body = {
+                    approverentry: {
+                        level: level,
+                        country: country,
+                        name: name,
+                        email: email
+                    }
+                };
+
+                const response = await fetch("/odata/v4/supplier/approverentry", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(body)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    MessageToast.show(result.value);
+                    this.byId("createApproverDialog").close(); // ✅ consistent
+                } else {
+                    MessageBox.error(result.error?.message || "Failed to insert approver");
+                }
+            } catch (e) {
+                MessageBox.error("Error: " + e.message);
+            }
         }
+        ,
+
+        // Cancel creation
+        onCancelApprover: function () {
+            this.byId("createApproverDialog").close();
+        }
+
 
     });
 });

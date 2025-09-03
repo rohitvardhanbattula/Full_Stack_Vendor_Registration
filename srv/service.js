@@ -28,6 +28,23 @@ app.post('/uploadattachments', async (req, res) => {
   }
 });
 
+app.post('/bpa-callback',async(req,res) =>{
+
+  try{
+    const { suppliername, level, status, comment, email } = req.body;
+    if (!suppliername || !level || !status || !email) return res.status(400).send("Missing fields");
+
+    const comments = comment ?? "No Comments";
+
+    await UPDATE('my.supplier.ApproverComment')
+      .set({ status, comment: comments, updatedAt: new Date() })
+      .where({ sup_name: suppliername, level, email });
+  }
+  catch (err) {
+    console.error("❌ BPA callback failed:", err);
+    res.status(500).send("Callback failed");
+  }
+});
 
 
 
@@ -78,7 +95,7 @@ module.exports = cds.service.impl(function () {
         additionalInfo_ID: addInfoId
       });
 
-      const approversList = await SELECT.from('my.supplier.Approver').orderBy('level').where({ Country: supplierData.mainAddress.country });
+      const approversList = await SELECT.from('my.supplier.Approver').orderBy('level').where({ country: supplierData.mainAddress.country });
 
       const approvalEntries = approversList.map(approver => ({
         sup_name: supplierData.supplierName,

@@ -30,35 +30,14 @@ modules:
       config:
         HTML5Runtime_enabled: true
       content-target: true
-  parameters:
-    config:
-      HTML5Runtime_enabled: true
-      init_data:
-        instance:
-          destinations:
-          - Authentication: NoAuthentication
-            HTML5.DynamicDestination: true
-            HTML5.ForwardAuthToken: true
-            Name: srv-api
-            ProxyType: Internet
-            Type: HTTP
-            URL: ~{srv-api/srv-url}
-          - Authentication: NoAuthentication
-            Name: ui5
-            ProxyType: Internet
-            Type: HTTP
-            URL: https://ui5.sap.com
-          existing_destinations_policy: update
   build-parameters:
+    ignore:
+      - "node_modules/"
     build-result: app/
     requires:
     - artifacts:
       - vendor_portal.zip
       name: VendorPortalvendor_portal
-      target-path: app/
-    - artifacts:
-      - vendorportal.zip
-      name: vendorportal
       target-path: app/
 - name: VendorPortalvendor_portal
   type: html5
@@ -69,6 +48,7 @@ modules:
     commands:
     - npm install
     - npm run build:cf
+    - npm run build
     supported-platforms: []
 - name: VendorPortal-db-deployer
   type: hdb
@@ -77,31 +57,32 @@ modules:
   - name: VendorPortal-db
   parameters:
     buildpack: nodejs_buildpack
-- name: VendorPortal-destination-content
+- name: VendorPortal-destinations
   type: com.sap.application.content
   requires:
-  - name: VendorPortal-destination
-    parameters:
-      content-target: true
-  - name: VendorPortal-html5-repo-host
-    parameters:
-      service-key:
-        name: VendorPortal-html5-repo-host-key
   - name: VendorPortal-auth
     parameters:
       service-key:
         name: VendorPortal-auth-key
+  - name: VendorPortal-html5-repo-host
+    parameters:
+      service-key:
+        name: VendorPortal-html5-repo-host-key
+  - name: srv-api
+  - name: VendorPortal-destination
+    parameters:
+      content-target: true
   parameters:
     content:
       instance:
         destinations:
-        - Name: VendorPortal_html_repo_host
-          ServiceInstanceName: VendorPortal-html5-service
+        - Name: VendorPortal-html5-repository
+          ServiceInstanceName: VendorPortal-html5-repo-host
           ServiceKeyName: VendorPortal-html5-repo-host-key
           sap.cloud.service: VendorPortal
         - Authentication: OAuth2UserTokenExchange
-          Name: VendorPortal_uaa
-          ServiceInstanceName: VendorPortal-xsuaa-service
+          Name: VendorPortal-auth
+          ServiceInstanceName: VendorPortal-auth
           ServiceKeyName: VendorPortal-auth-key
           sap.cloud.service: VendorPortal
         existing_destinations_policy: update
@@ -126,7 +107,7 @@ resources:
       xsappname: VendorPortal
     path: ./xs-security.json
     service: xsuaa
-    service-name: VendorPortal-xsuaa-service
+    service-name: VendorPortal-auth
     service-plan: application
 - name: VendorPortal-destination
   type: org.cloudfoundry.managed-service
@@ -137,28 +118,38 @@ resources:
         instance:
           destinations:
           - Authentication: NoAuthentication
-            Name: ui5
-            ProxyType: Internet
-            Type: HTTP
-            URL: https://ui5.sap.com
-          - Authentication: NoAuthentication
             HTML5.DynamicDestination: true
             HTML5.ForwardAuthToken: true
             Name: srv-api
             ProxyType: Internet
             Type: HTTP
             URL: ~{srv-api/srv-url}
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
           existing_destinations_policy: update
     service: destination
     service-plan: lite
   requires:
   - name: srv-api
+    group: destinations
+    properties:
+      forwardAuthToken: true
+      name: srv-api
+      url: ~{srv-url}
 - name: VendorPortal-html5-repo-host
   type: org.cloudfoundry.managed-service
   parameters:
     service: html5-apps-repo
-    service-name: VendorPortal-html5-service
+    service-name: VendorPortal-html5-repo-host
     service-plan: app-host
+- name: VendorPortal-html5-runtime
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-plan: app-runtime
 - name: VendorPortal-db
   type: com.sap.xs.hdi-container
   parameters:

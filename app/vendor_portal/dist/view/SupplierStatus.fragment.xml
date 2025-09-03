@@ -9,20 +9,19 @@
                 <columns>
                     <Column><Text text="Step"/></Column>
                     <Column><Text text="Approver Name"/></Column>
-                    <Column><Text text="Role"/></Column>
-                    <Column><Text text="Status"/></Column>
                     <Column><Text text="Comments"/></Column>
+                    <Column><Text text="Status"/></Column>
                     <Column><Text text="Approval Time"/></Column>
                 </columns>
                 <items>
                     <ColumnListItem>
                         <cells>
-                            <Text text="{statusModel>step}" />
-                            <Text text="{statusModel>approverName}" />
-                            <Text text="{statusModel>role}" />
+                            <Text text="{statusModel>level}" />
+                            <Text text="{statusModel>name}" />
+                            <Text text="{statusModel>comment}" />
                             <ObjectStatus text="{statusModel>status}"
                                           state="{= ${statusModel>status} === 'Approved' ? 'Success' : (${statusModel>status} === 'Rejected' ? 'Error' : 'Warning') }"/>
-                            <Text text="{statusModel>comments}" />
+                            
                             <Text text="{statusModel>time}" />
                         </cells>
                     </ColumnListItem>
