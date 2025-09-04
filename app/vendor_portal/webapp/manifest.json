@@ -129,6 +129,6 @@
   },
   "sap.cloud": {
     "public": true,
-    "service": "VendorPortal"
+    "service": "VendorPortal.service"
   }
 }

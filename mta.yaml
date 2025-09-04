@@ -3,158 +3,139 @@ ID: VendorPortal
 description: A simple CAP project.
 version: 1.0.0
 modules:
-- name: VendorPortal-srv
-  type: nodejs
-  path: gen/srv
-  requires:
+  - name: VendorPortal-srv
+    type: nodejs
+    path: gen/srv
+    requires:
+      - name: VendorPortal-auth
+      - name: VendorPortal-db
+      - name: VendorPortal-destination
+    provides:
+      - name: srv-api
+        properties:
+          srv-url: ${default-url}
+    parameters:
+      buildpack: nodejs_buildpack
+      instances: 1
+    build-parameters:
+      builder: npm-ci
+  - name: VendorPortal-db-deployer
+    type: hdb
+    path: gen/db
+    requires:
+      - name: VendorPortal-db
+    parameters:
+      buildpack: nodejs_buildpack
+  - name: VendorPortal-app-deployer
+    type: com.sap.application.content
+    path: gen
+    requires:
+      - name: VendorPortal-html5-repo-host
+        parameters:
+          content-target: true
+    build-parameters:
+      build-result: app/
+      requires:
+        - artifacts:
+            - vendorportal.zip
+          name: VendorPortalvendor_portal
+          target-path: app/
+  - name: VendorPortalvendor_portal
+    type: html5
+    path: app/vendor_portal
+    build-parameters:
+      build-result: dist
+      builder: custom
+      commands:
+        - npm ci
+        - npm run build
+      supported-platforms: []
+  - name: VendorPortal-destinations
+    type: com.sap.application.content
+    requires:
+      - name: VendorPortal-auth
+        parameters:
+          service-key:
+            name: VendorPortal-auth-key
+      - name: VendorPortal-html5-repo-host
+        parameters:
+          service-key:
+            name: VendorPortal-html5-repo-host-key
+      - name: srv-api
+      - name: VendorPortal-destination
+        parameters:
+          content-target: true
+    parameters:
+      content:
+        instance:
+          destinations:
+            - Name: VendorPortal-html5-repository
+              ServiceInstanceName: VendorPortal-html5-repo-host
+              ServiceKeyName: VendorPortal-html5-repo-host-key
+              sap.cloud.service: VendorPortal.service
+            - Authentication: OAuth2UserTokenExchange
+              Name: VendorPortal-auth
+              ServiceInstanceName: VendorPortal-auth
+              ServiceKeyName: VendorPortal-auth-key
+              sap.cloud.service: VendorPortal.service
+          existing_destinations_policy: update
+    build-parameters:
+      no-source: true
+resources:
   - name: VendorPortal-auth
-  - name: VendorPortal-destination
+    type: org.cloudfoundry.managed-service
+    parameters:
+      config:
+        tenant-mode: dedicated
+        xsappname: VendorPortal
+      path: ./xs-security.json
+      service: xsuaa
+      service-plan: application
   - name: VendorPortal-db
-  provides:
-  - name: srv-api
-    properties:
-      srv-url: ${default-url}
-  parameters:
-    buildpack: nodejs_buildpack
-    instances: 1
-  build-parameters:
-    builder: npm-ci
-- name: VendorPortal-app-deployer
-  type: com.sap.application.content
-  path: gen
-  requires:
-  - name: VendorPortal-auth
-  - name: srv-api
-  - name: VendorPortal-html5-repo-host
+    type: com.sap.xs.hdi-container
+    parameters:
+      service: hana
+      service-plan: hdi-shared
+  - name: VendorPortal-destination
+    type: org.cloudfoundry.managed-service
     parameters:
       config:
         HTML5Runtime_enabled: true
-      content-target: true
-  build-parameters:
-    ignore:
-      - "node_modules/"
-    build-result: app/
+        init_data:
+          instance:
+            destinations:
+              - Authentication: NoAuthentication
+                Name: ui5
+                ProxyType: Internet
+                Type: HTTP
+                URL: https://ui5.sap.com                
+              - Name: srv-api
+                Authentication: NoAuthentication
+                ProxyType: Internet
+                Type: HTTP
+                URL: ~{srv-api/srv-url}
+                HTML5.DynamicDestination: true
+                HTML5.ForwardAuthToken: true
+            existing_destinations_policy: update
+      service: destination
+      service-plan: lite
     requires:
-    - artifacts:
-      - vendor_portal.zip
-      name: VendorPortalvendor_portal
-      target-path: app/
-- name: VendorPortalvendor_portal
-  type: html5
-  path: app/vendor_portal
-  build-parameters:
-    build-result: dist
-    builder: custom
-    commands:
-    - npm install
-    - npm run build:cf
-    - npm run build
-    supported-platforms: []
-- name: VendorPortal-db-deployer
-  type: hdb
-  path: gen/db
-  requires:
-  - name: VendorPortal-db
-  parameters:
-    buildpack: nodejs_buildpack
-- name: VendorPortal-destinations
-  type: com.sap.application.content
-  requires:
-  - name: VendorPortal-auth
-    parameters:
-      service-key:
-        name: VendorPortal-auth-key
+      - name: srv-api
+        group: destinations
+        properties:
+          forwardAuthToken: true
+          name: srv-api
+          url: ~{srv-url}
   - name: VendorPortal-html5-repo-host
+    type: org.cloudfoundry.managed-service
     parameters:
-      service-key:
-        name: VendorPortal-html5-repo-host-key
-  - name: srv-api
-  - name: VendorPortal-destination
+      service: html5-apps-repo
+      service-plan: app-host
+  - name: VendorPortal-html5-runtime
+    type: org.cloudfoundry.managed-service
     parameters:
-      content-target: true
-  parameters:
-    content:
-      instance:
-        destinations:
-        - Name: VendorPortal-html5-repository
-          ServiceInstanceName: VendorPortal-html5-repo-host
-          ServiceKeyName: VendorPortal-html5-repo-host-key
-          sap.cloud.service: VendorPortal
-        - Authentication: OAuth2UserTokenExchange
-          Name: VendorPortal-auth
-          ServiceInstanceName: VendorPortal-auth
-          ServiceKeyName: VendorPortal-auth-key
-          sap.cloud.service: VendorPortal
-        existing_destinations_policy: update
-  build-parameters:
-    no-source: true
-- name: vendorportal
-  type: html5
-  path: app/vendor_portal
-  build-parameters:
-    build-result: dist
-    builder: custom
-    commands:
-    - npm install
-    - npm run build:cf
-    supported-platforms: []
-resources:
-- name: VendorPortal-auth
-  type: org.cloudfoundry.managed-service
-  parameters:
-    config:
-      tenant-mode: dedicated
-      xsappname: VendorPortal
-    path: ./xs-security.json
-    service: xsuaa
-    service-name: VendorPortal-auth
-    service-plan: application
-- name: VendorPortal-destination
-  type: org.cloudfoundry.managed-service
-  parameters:
-    config:
-      HTML5Runtime_enabled: true
-      init_data:
-        instance:
-          destinations:
-          - Authentication: NoAuthentication
-            HTML5.DynamicDestination: true
-            HTML5.ForwardAuthToken: true
-            Name: srv-api
-            ProxyType: Internet
-            Type: HTTP
-            URL: ~{srv-api/srv-url}
-          - Authentication: NoAuthentication
-            Name: ui5
-            ProxyType: Internet
-            Type: HTTP
-            URL: https://ui5.sap.com
-          existing_destinations_policy: update
-    service: destination
-    service-plan: lite
-  requires:
-  - name: srv-api
-    group: destinations
-    properties:
-      forwardAuthToken: true
-      name: srv-api
-      url: ~{srv-url}
-- name: VendorPortal-html5-repo-host
-  type: org.cloudfoundry.managed-service
-  parameters:
-    service: html5-apps-repo
-    service-name: VendorPortal-html5-repo-host
-    service-plan: app-host
-- name: VendorPortal-html5-runtime
-  type: org.cloudfoundry.managed-service
-  parameters:
-    service: html5-apps-repo
-    service-plan: app-runtime
-- name: VendorPortal-db
-  type: com.sap.xs.hdi-container
-  parameters:
-    service: hana
-    service-plan: hdi-shared
+      service: html5-apps-repo
+      service-plan: app-runtime
 parameters:
   deploy_mode: html5-repo
   enable-parallel-deployments: true
