@@ -83,8 +83,9 @@
                                 name="file"
                                 uploadOnChange="false"
                                 multiple="true"
+                                 tooltip="Maximum 2 files allowed"
                                 change="onFileChange"/>
-                            <Text text="You can upload multiple files. Supported formats: PDF, DOCX, XLSX"/>
+                            <Text text="You can upload 2 files max. Supported formats: PDF, DOCX, XLSX"/>
                         </VBox>
                     </WizardStep>
                 </Wizard>

@@ -7,12 +7,17 @@
   "private": true,
   "dependencies": {
     "@cap-js/hana": "^2",
+    "@sap-cloud-sdk/connectivity": "^3",
+    "@sap-cloud-sdk/http-client": "^4.1.1",
+    "@sap-cloud-sdk/odata-v2": "^4.1.1",
+    "@sap-cloud-sdk/resilience": "^3",
     "@sap/cds": "^9.2.0",
     "@sap/cds-dk": "^9.2.0",
     "@sap/xsenv": "^5.4.0",
     "@sap/xssec": "^4",
     "express": "^4",
     "express-fileupload": "^1.5.2",
+    "jszip": "^3.10.1",
     "uninstall": "^0.0.0",
     "update": "^0.7.4"
   },
@@ -22,6 +27,7 @@
   "devDependencies": {
     "@cap-js/cds-types": "^0.13.0",
     "@cap-js/sqlite": "^2",
+    "@sap-cloud-sdk/generator": "^4.1.1",
     "@sap/cds-dk": "^9.2.0",
     "mbt": "^1.2.29",
     "rimraf": "^5.0.5"
@@ -55,6 +61,10 @@
       "workzone": true,
       "[production]": {
         "auth": "xsuaa"
+      },
+      "A_BUSINESS_PARTNER": {
+        "kind": "odata-v2",
+        "model": "srv/external/A_BUSINESS_PARTNER"
       }
     }
   }

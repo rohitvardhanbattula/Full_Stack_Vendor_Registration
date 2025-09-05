@@ -4,6 +4,7 @@ using { cuid } from '@sap/cds/common';
 
 entity Supplier : cuid {
     key supplierName      : String(200) @cds.persistence.unique;
+        businessPartnerId   : String;
         mainAddress       : Association to Address;
         primaryContact    : Association to Contact;
         categoryAndRegion : Association to CategoryRegion;
@@ -41,7 +42,7 @@ entity AdditionalInfo : cuid {
 entity Attachment : cuid {
     supplier     : Association to Supplier;
     supplierName : String;
-    key fileName : String(255);
+     fileName : String(255);
     mimeType     : String(100);
     content      : LargeString;
     uploadedAt   : Timestamp;
@@ -51,7 +52,7 @@ entity Approver : cuid {
     name        : String(100);
     email       : String(200);
     country        : String(50);
-    level: Integer;
+    level:  String;
 }
 
 entity ApproverComment : cuid {
@@ -64,4 +65,5 @@ entity ApproverComment : cuid {
     status      : String(30);
     comment    : String(1000);
     createdAt  : Timestamp;
+    updatedAt : Timestamp;
 }

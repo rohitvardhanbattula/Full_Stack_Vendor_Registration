@@ -7,6 +7,7 @@ type approverinput {
 
 type SupplierInput {
     supplierName      : String(200);
+    businessPartnerId   : String;
     mainAddress       : AddressInput;
     primaryContact    : ContactInput;
     categoryAndRegion : CategoryRegionInput;
@@ -59,5 +60,6 @@ service SupplierService {
     name: String;
     status : String;
     comment: String;
+    updatedAt: Timestamp;
   };
 }

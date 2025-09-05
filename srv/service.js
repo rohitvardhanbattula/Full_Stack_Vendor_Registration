@@ -1,5 +1,8 @@
 const cds = require('@sap/cds');
 const fileUpload = require('express-fileupload');
+const JSZip = require('jszip');
+const { executeHttpRequest } = require('@sap-cloud-sdk/http-client');
+const { getDestination } = require('@sap-cloud-sdk/connectivity');
 
 cds.on('bootstrap', app => {
   app.use(fileUpload());
@@ -9,28 +12,125 @@ const app = cds.app;
 app.use(require("express").json());
 app.use(fileUpload());
 
+app.get('/downloadZip/:supplierName', async (req, res) => {
+  const { supplierName } = req.params;
+  const files = await SELECT.from('my.supplier.Attachment').where({ supplierName });
+  if (!files || files.length === 0) return res.status(404).send("No files found");
+
+  const zip = new JSZip();
+  files.forEach(file => {
+    const buffer = Buffer.from(file.content, 'base64');
+    zip.file(file.fileName, buffer);
+  });
+
+  const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
+  res.setHeader('Content-Disposition', `attachment; filename="Vendor_${supplierName}_Files.zip"`);
+  res.setHeader('Content-Type', 'application/zip');
+  res.send(zipBuffer);
+});
+
+app.get('/downloadFile/:fileID', async (req, res) => {
+  const { fileID } = req.params;
+  const file = await SELECT.one.from('my.supplier.Attachment').where({ ID: fileID });
+  if (!file) return res.status(404).send("File not found");
+
+  const buffer = Buffer.from(file.content, 'base64');
+  res.setHeader('Content-Disposition', `inline; filename="${file.fileName}"`);
+  res.setHeader('Content-Type', file.mimeType);
+  res.send(buffer);
+});
+
 app.post('/uploadattachments', async (req, res) => {
   const supplierName = req.body.supplierName;
-  if (req.files && req.files.file) {
-    const uploadedFile = req.files.file;
-    const base64Content = uploadedFile.data.toString('base64');
-    await INSERT.into('my.supplier.Attachment').entries({
-      ID: cds.utils.uuid(),
-      supplierName,
-      fileName: uploadedFile.name,
-      mimeType: uploadedFile.mimetype,
-      content: base64Content,
-      uploadedAt: new Date()
-    });
-    res.send('File uploaded successfully');
+
+  if (req.files && req.files.files) {
+    // Normalize to array (even if only 1 file)
+    const files = Array.isArray(req.files.files) ? req.files.files : [req.files.files];
+
+    // Save all attachments
+    for (const uploadedFile of files) {
+      const base64Content = uploadedFile.data.toString('base64');
+      await INSERT.into('my.supplier.Attachment').entries({
+        ID: cds.utils.uuid(),
+        supplierName,
+        fileName: uploadedFile.name,
+        mimeType: uploadedFile.mimetype,
+        content: base64Content,
+        uploadedAt: new Date()
+      });
+    }
+
+    try {
+      const [vendor] = await SELECT.from('my.supplier.Supplier').where({ supplierName });
+      if (!vendor) {
+        console.error("Vendor not found for BPA");
+        return res.status(404).send({ message: "Vendor not found" });
+      }
+
+      // ✅ Trigger BPA only once per supplier
+      setTimeout(async () => {
+        try {
+          await triggerNextApprover(supplierName);
+          console.log(`✅ BPA triggered for supplier ${supplierName}`);
+        } catch (err) {
+          console.error(`❌ BPA trigger failed for supplier ${supplierName}:`, err);
+        }
+      }, 10000);
+
+      res.send({ message: `${files.length} file(s) uploaded, BPA trigger scheduled` });
+    } catch (err) {
+      console.error("❌ Error after file upload:", err);
+      res.status(500).send({ message: "Error after file upload" });
+    }
   } else {
-    res.status(400).send('No file uploaded');
+    res.status(400).send({ message: "No file uploaded" });
   }
 });
 
-app.post('/bpa-callback',async(req,res) =>{
 
-  try{
+
+
+async function triggerNextApprover(supplierName) {
+  const vendor = await SELECT.one
+  .from('my.supplier.Supplier')
+  .columns(
+    'supplierName',
+    'primaryContact.email',
+    'primaryContact.phone',
+    'mainAddress.country'
+  )
+  .where({ supplierName });
+
+
+  const approvals = await SELECT.from('my.supplier.ApproverComment')
+    .where({ sup_name: supplierName })
+    .orderBy('level asc');
+
+  const allPreviousComments = approvals
+    .filter(a => a.status !== 'PENDING' && a.comment)
+    .map(a => `${a.email} ${new Date(a.updatedAt || new Date()).toLocaleString()} - ${a.comment}`)
+    .join("\n");
+
+  for (const approver of approvals) {
+    if (approver.status === 'PENDING') {
+      await startBPAWorkflow({
+        name: vendor.supplierName,
+        email: vendor.primaryContact_email,
+        country: vendor.mainAddress_country,
+        phone: vendor.primaryContact_phone,
+        status: "PENDING",
+        approver_name: approver.name,
+        approver_email: approver.email,
+        approver_level: approver.level,
+        prior_comments: allPreviousComments || "No prior comments"
+      });
+      break;
+    }
+  }
+}
+
+app.post('/bpa-callback', async (req, res) => {
+  try {
     const { suppliername, level, status, comment, email } = req.body;
     if (!suppliername || !level || !status || !email) return res.status(400).send("Missing fields");
 
@@ -39,16 +139,129 @@ app.post('/bpa-callback',async(req,res) =>{
     await UPDATE('my.supplier.ApproverComment')
       .set({ status, comment: comments, updatedAt: new Date() })
       .where({ sup_name: suppliername, level, email });
-  }
-  catch (err) {
+
+    if (status === 'Rejected') {
+      const currentLevelNum = Number(level);
+      const approvers = await SELECT.from('my.supplier.ApproverComment')
+        .where({ sup_name: suppliername });
+      for (let approver of approvers) {
+        const lvlNum = Number(approver.level);
+        if (lvlNum > currentLevelNum) {
+          await UPDATE('my.supplier.ApproverComment')
+            .set({
+              status: 'REJECTED',
+              comment: 'Auto-rejected due to previous rejection'
+            })
+            .where({ sup_name: suppliername, level: approver.level });
+        }
+      }
+      return res.send({ message: "Approval rejected." });
+    }
+
+    const nextLevel = (parseInt(level, 10) + 1).toString();
+    const next = await SELECT.one.from('my.supplier.ApproverComment')
+      .where({ sup_name: suppliername, level: nextLevel });
+
+    if (next) {
+      await triggerNextApprover(suppliername);
+    } else {
+      const vendor = await SELECT.one.from('my.supplier.Supplier').where({ suppliername });
+      await createBusinessPartnerInS4(vendor);
+      return res.send({ message: "All levels approved." });
+    }
+
+    res.send({ message: "Approval recorded. Next level in progress." });
+  } catch (err) {
     console.error("❌ BPA callback failed:", err);
     res.status(500).send("Callback failed");
   }
 });
 
 
+const { apiBusinessPartner } = require('./src/generated/A_BUSINESS_PARTNER');
 
+async function createBusinessPartnerInS4(vendor) {
+  const { businessPartnerApi } = apiBusinessPartner();
 
+try {
+  const partnerEntity = businessPartnerApi.entityBuilder()
+    .businessPartnerCategory("2")
+    .businessPartnerGrouping("BP02")
+    .firstName(vendor.suppliername)
+    .personFullName(vendor.suppliername)
+    .businessPartnerFullName(vendor.suppliername)
+    .nameCountry("US")
+    .businessPartnerName(vendor.suppliername)
+    .organizationBpName1(vendor.suppliername)
+    .build(); 
+
+  console.log("Payload:", partnerEntity);
+
+  const result = await businessPartnerApi
+    .requestBuilder()
+    .create(partnerEntity)
+    .execute({ destinationName: 'vendordestination' });
+
+  console.log("Business Partner created:", result);
+  const bpId = result.businessPartner;
+   await UPDATE('my.supplier.Supplier')
+      .set({ businessPartnerId: bpId })
+      .where({ supplierName: vendor.supplierName });
+  return result;
+} catch (error) {
+  console.error("Error creating Business Partner:", error.rootCause?.response?.data?.error?.message?.value || error.message);
+  throw error;
+}
+
+}
+async function getAppHostURLFromDestination() {
+  
+  
+    const destination = await getDestination({ destinationName: 'vendorportaldest' }, { useCache: true });
+    console.log("destination fetched", destination)
+    if (!destination || !destination.url) throw new Error("Destination not found or invalid");
+    return destination.url.replace(/\/$/, '');
+}
+
+async function startBPAWorkflow({ name, email, country, phone, status, approver_name, approver_email, approver_level, prior_comments }) {
+  const files = await SELECT.from('my.supplier.Attachment').columns('ID', 'fileName').where({ supplierName: name });
+  var host = '';
+  //host = `https://the-hackett-group-d-b-a-answerthink--inc--at-development1a73fa6.cfapps.us10.hana.ondemand.com`;
+  host= await getAppHostURLFromDestination();
+  const fileLinks = files.map(file => `${host}/downloadFile/${file.ID}`);
+  const fileZipLink = `${host}/downloadZip/${name}`;
+
+  const [attachment1, attachment2] = [fileLinks[0] || "", fileLinks[1] || ""];
+
+  return await executeHttpRequest(
+  { destinationName: 'spa_process_destination' },
+  {
+    method: 'POST',
+    url: "/",
+    headers: {   // ✅ move headers here
+      'Content-Type': 'application/json'
+    },
+    data: {
+      definitionId: "us10.at-development-hgv7q18y.vendorportalbuildautomation.vendorportalprocess",
+      context: {
+        _name: name,
+        email,
+        country,
+        phone,
+        status,
+        attachment1,
+        attachment2,
+        attachments: fileZipLink,
+        approver_name,
+        approver_level,
+        approver_email,
+        prior_comments
+      }
+    }
+  }
+);
+
+}
 
 module.exports = cds.service.impl(function () {
   this.on('getsuppliers', async (req) => {
@@ -89,6 +302,7 @@ module.exports = cds.service.impl(function () {
       await INSERT.into('my.supplier.Supplier').entries({
         ID: supplierId,
         supplierName: supplierData.supplierName,
+        businessPartnerId   : "",
         mainAddress_ID: addressId,
         primaryContact_ID: contactId,
         categoryAndRegion_ID: catRegId,
@@ -110,7 +324,6 @@ module.exports = cds.service.impl(function () {
         await INSERT.into('my.supplier.ApproverComment').entries(approvalEntries);
       }
 
-
       return `Supplier ${supplierData.supplierName} created successfully`;
     } catch (err) {
       req.error(500, 'Error creating supplier: ' + err.message);
@@ -126,12 +339,11 @@ module.exports = cds.service.impl(function () {
       return req.error(500, 'Error fetching approvers: ' + e.message);
     }
   });
+
   this.on("approverentry", async (req) => {
     try {
       const { approverentry } = req.data;
-
       const { level, country } = approverentry;
-
 
       const exists = await SELECT.one.from("my.supplier.Approver")
         .where({ level: level, country: country });
@@ -139,7 +351,6 @@ module.exports = cds.service.impl(function () {
       if (exists) {
         return `Approver already exists for Level ${level} and Country ${country}`;
       }
-
 
       await INSERT.into("my.supplier.Approver").entries(approverentry);
 
@@ -153,7 +364,7 @@ module.exports = cds.service.impl(function () {
     const { suppliername } = req.data;
     if (!suppliername) return "Not found";
     const approvals = await SELECT.from('my.supplier.ApproverComment')
-      .columns('level', 'status', 'comment', 'email','name')
+      .columns('level', 'status', 'comment', 'email', 'name')
       .where({ sup_name: suppliername });
 
     return approvals;

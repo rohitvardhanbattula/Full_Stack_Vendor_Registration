@@ -22,7 +22,7 @@
                             <ObjectStatus text="{statusModel>status}"
                                           state="{= ${statusModel>status} === 'Approved' ? 'Success' : (${statusModel>status} === 'Rejected' ? 'Error' : 'Warning') }"/>
                             
-                            <Text text="{statusModel>time}" />
+                            <Text text="{statusModel>updatedAt}" />
                         </cells>
                     </ColumnListItem>
                 </items>

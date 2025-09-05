@@ -15,6 +15,7 @@ sap.ui.define([
             const oModel = new JSONModel({
                 supplierData: {
                     supplierName: "",
+                    businessPartnerId: "",
                     mainAddress: { street: "", line2: "", line3: "", city: "", postalCode: "", country: "", region: "" },
                     primaryContact: { firstName: "", lastName: "", email: "", phone: "" },
                     categoryAndRegion: { category: "", region: "" },
@@ -23,23 +24,13 @@ sap.ui.define([
                 suppliers: []
             });
             this.getView().setModel(oModel);
-            this.getSuppliers();
         },
 
-        getSuppliers: function () {
-            var s = this.getURL() + `/odata/v4/supplier/getsuppliers`;
-            fetch(s)
-                .then(res => res.json())
-                .then(data => {
-                    this.getView().getModel().setProperty("/suppliers", Array.isArray(data.value) ? data.value : data);
-                })
-                .catch(err => {
-                    MessageBox.error("Error fetching suppliers: " + err.message);
-                });
-        },
 
         onFileChange: function (oEvent) {
             this._files = oEvent.getParameter("files") || [];
+            
+
             MessageToast.show(`${this._files.length} file(s) selected.`);
         },
 
@@ -59,18 +50,27 @@ sap.ui.define([
                 .then(result => {
                     MessageToast.show(result.value);
 
+                    // ✅ Upload all files in a single request
                     if (this._files && this._files.length > 0) {
-                        Array.from(this._files).forEach(file => {
-                            const formData = new FormData();
-                            formData.append("file", file);
-                            formData.append("supplierName", oData.supplierName);
+                        const formData = new FormData();
+                        formData.append("supplierName", oData.supplierName);
 
-                            fetch(this.getURL()+ `/uploadattachments`, { method: "POST", body: formData })
-                                .catch(err => MessageBox.error("File upload error: " + err.message));
+                        Array.from(this._files).forEach(file => {
+                            formData.append("files", file); // 👈 all under "files"
                         });
+
+                        fetch(this.getURL() + `/uploadattachments`, {
+                            method: "POST",
+                            body: formData
+                        })
+                            .then(res => res.json())
+                            .then(r => {
+                                MessageToast.show(r.message);
+                            })
+                            .catch(err => MessageBox.error("File upload error: " + err.message));
                     }
 
-                    this.getSuppliers();
+                    // ✅ Reset wizard
                     this._resetForm();
                     const oWizard = this.byId("createWizard");
                     if (oWizard) {
@@ -81,6 +81,7 @@ sap.ui.define([
                 .catch(err => {
                     MessageBox.error("Error saving supplier: " + err.message);
                 });
+
         },
 
         _resetForm: function () {
@@ -206,7 +207,7 @@ sap.ui.define([
         onViewStatus: function (oEvent) {
             const oSupplier = oEvent.getSource().getBindingContext().getObject();
             const oView = this.getView();
-            fetch(this.getURL() +`/odata/v4/supplier/Approvals?suppliername=${oSupplier.supplierName}`)
+            fetch(this.getURL() + `/odata/v4/supplier/Approvals?suppliername=${oSupplier.supplierName}`)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error("Failed to fetch supplier status");
@@ -311,7 +312,7 @@ sap.ui.define([
                     }
                 };
 
-                const response = await fetch("/odata/v4/supplier/approverentry", {
+                const response = await fetch(this.getURL() + `/odata/v4/supplier/approverentry`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(body)

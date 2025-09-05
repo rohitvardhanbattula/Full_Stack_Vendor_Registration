@@ -20,6 +20,9 @@
                 
                 <f:FormContainer title="Supplier Information">
                     <f:formElements>
+                        <f:FormElement label="Business Partner ID" visible="{= ${selectedSupplier>/businessPartnerId} ? true : false}">
+                            <f:fields><Text text="{selectedSupplier>/businessPartnerId}"/></f:fields>
+                        </f:FormElement>
                         <f:FormElement label="Supplier Name">
                             <f:fields><Text text="{selectedSupplier>/supplierName}"/></f:fields>
                         </f:FormElement>
