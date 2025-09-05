@@ -11,6 +11,42 @@ sap.ui.define([
         getURL: function () {
             return sap.ui.require.toUrl("vendorportal");
         },
+        onNextStep1: function () {
+            let sName = this.byId("inpSupplierName").getValue();
+            if (!sName) {
+                sap.m.MessageBox.warning("Supplier Name is required.");
+                return;
+            }
+            this.byId("createWizard").nextStep();
+        },
+
+        onNextStep2: function () {
+            let sFirst = this.byId("inpFirstName").getValue();
+            let sEmail = this.byId("inpEmail").getValue();
+            if (!sFirst || !sEmail) {
+                sap.m.MessageBox.warning("First Name and Email are required.");
+                return;
+            }
+            this.byId("createWizard").nextStep();
+        },
+
+        onNextStep3: function () {
+            let sCategory = this.byId("inpCategory").getValue();
+            if (!sCategory) {
+                sap.m.MessageBox.warning("Category is required.");
+                return;
+            }
+            this.byId("createWizard").nextStep();
+        },
+
+        onNextStep4: function () {
+            // You can validate file uploads if required
+            this.byId("createWizard").nextStep();
+
+            // ✅ Enable Create Supplier button at last step
+            this.byId("btnCreateSupplier").setEnabled(true);
+        },
+
         onInit: function () {
             const oModel = new JSONModel({
                 supplierData: {
@@ -29,7 +65,7 @@ sap.ui.define([
 
         onFileChange: function (oEvent) {
             this._files = oEvent.getParameter("files") || [];
-            
+
 
             MessageToast.show(`${this._files.length} file(s) selected.`);
         },

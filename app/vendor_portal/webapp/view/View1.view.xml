@@ -24,13 +24,13 @@
         <fd:content>
             <VBox class="sapUiSmallMargin">
 
-                <Wizard id="createWizard">
+                <Wizard id="createWizard" showNextButton="false">
 
                     <WizardStep id="step1" title="Supplier Details">
                         <VBox>
                             <fl:SimpleForm editable="true" layout="ResponsiveGridLayout">
                                 <Label text="Supplier Name"/>
-                                <Input value="{/supplierData/supplierName}" required="true"/>
+                                <Input id="inpSupplierName" value="{/supplierData/supplierName}" required="true"/>
                                 <Label text="Street"/>
                                 <Input value="{/supplierData/mainAddress/street}"/>
                                 <Label text="Line2"/>
@@ -46,6 +46,7 @@
                                 <Label text="Region"/>
                                 <Input value="{/supplierData/mainAddress/region}"/>
                             </fl:SimpleForm>
+                            <Button text="Next" type="Emphasized" press="onNextStep1"/>
                         </VBox>
                     </WizardStep>
 
@@ -53,27 +54,29 @@
                         <VBox>
                             <fl:SimpleForm editable="true">
                                 <Label text="First Name"/>
-                                <Input value="{/supplierData/primaryContact/firstName}"  required="true"/>
+                                <Input id="inpFirstName" value="{/supplierData/primaryContact/firstName}"  required="true"/>
                                 <Label text="Last Name"/>
                                 <Input value="{/supplierData/primaryContact/lastName}"/>
                                 <Label text="Email"/>
-                                <Input value="{/supplierData/primaryContact/email}" type="Email"  required="true"/>
+                                <Input id="inpEmail" value="{/supplierData/primaryContact/email}" type="Email"  required="true"/>
                                 <Label text="Phone"/>
                                 <Input value="{/supplierData/primaryContact/phone}" type="Tel"/>
                             </fl:SimpleForm>
+                            <Button text="Next" type="Emphasized" press="onNextStep2"/>
                         </VBox>
                     </WizardStep>
 
-                    <WizardStep id="step3" title="Category &amp; Additional Info">
+                    <WizardStep id="step3" title="Category and Additional Info">
                         <VBox>
                             <fl:SimpleForm editable="true">
                                 <Label text="Category"/>
-                                <Input value="{/supplierData/categoryAndRegion/category}" required="true"/>
+                                <Input id="inpCategory" value="{/supplierData/categoryAndRegion/category}" required="true"/>
                                 <Label text="Region"/>
                                 <Input value="{/supplierData/categoryAndRegion/region}"/>
                                 <Label text="Additional Info"/>
-                                <TextArea value="{/supplierData/additionalInfo/details}" rows="4"/>
+                                <TextArea value="{/supplierData/additionalInfo/details}" rows="3"/>
                             </fl:SimpleForm>
+                            <Button text="Next" type="Emphasized" press="onNextStep3"/>
                         </VBox>
                     </WizardStep>
 
@@ -86,13 +89,19 @@
                                  tooltip="Maximum 2 files allowed"
                                 change="onFileChange"/>
                             <Text text="You can upload 2 files max. Supported formats: PDF, DOCX, XLSX"/>
+                            <Button text="Next" type="Emphasized" press="onNextStep4"/>
+                        </VBox>
+                    </WizardStep>
+                    
+                    <WizardStep id="step5" title="Review &amp; Submit" validated="true">
+                        <VBox>
+                            <Text text="Please review all details before creating supplier."/>
+                            <HBox justifyContent="End" class="sapUiSmallMarginTop">
+                                <Button id="btnCreateSupplier" text="Create Supplier" type="Emphasized" press="onSaveSupplier" enabled="false"/>
+                            </HBox>
                         </VBox>
                     </WizardStep>
                 </Wizard>
-
-                <HBox justifyContent="End" class="sapUiSmallMarginTop">
-                    <Button text="Create Supplier" type="Emphasized" press="onSaveSupplier"/>
-                </HBox>
             </VBox>
         </fd:content>
     </fd:DynamicPage>
