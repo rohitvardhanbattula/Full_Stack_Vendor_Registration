@@ -83,8 +83,6 @@
 
                     <WizardStep id="step4" title="Upload Attachments">
                          <VBox class="sapUiSmallMargin">
-        <Label text="Notes (optional)" />
-        <TextArea id="TextArea" placeholder="Enter notes for files" rows="3"/>
 
         <HBox class="sapUiSmallMarginTop" justifyContent="Start" alignItems="Center">
             <u:FileUploader 

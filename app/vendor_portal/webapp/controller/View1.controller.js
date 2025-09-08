@@ -13,12 +13,20 @@ sap.ui.define([
         _validateInputs: function (aInputIds) {
             let bValid = true;
 
+            const fieldMessages = {
+                "inpSupplierName": "Supplier Name is required",
+                "inpCountry": "Country is required",
+                "inpFirstName": "First Name is required",
+                "inpEmail": "Email is required",
+                "inpCategory": "Category is required"
+            };
+
             aInputIds.forEach(id => {
                 let oInput = this.byId(id);
                 if (oInput) {
                     if (!oInput.getValue()) {
                         oInput.setValueState("Error");
-                        oInput.setValueStateText(oInput.getPlaceholder() || "This field is required.");
+                        oInput.setValueStateText(fieldMessages[id] || "This field is required.");
                         bValid = false;
                     } else {
                         oInput.setValueState("None");
@@ -28,6 +36,7 @@ sap.ui.define([
 
             return bValid;
         },
+
 
         onNextStep1: function () {
             let bValid = this._validateInputs(["inpSupplierName", "inpCountry"]);
@@ -54,7 +63,7 @@ sap.ui.define([
             // You can validate file uploads if required
 
             const aUploaded = this.getView().getModel().getProperty("/uploadedFiles") || [];
-            console.log("AP",aUploaded.length);
+            console.log("AP", aUploaded.length);
             if (aUploaded.length > 2) {
                 sap.m.MessageBox.warning("You have uploaded more than 2 files. Please remove extra files before proceeding.");
                 return; // block navigation if more than 2 files
@@ -79,48 +88,66 @@ sap.ui.define([
                 uploadedFiles: []
             });
             this.getView().setModel(oModel);
-        }
-        ,
-       
-onFileChange: function(oEvent) {
-    this._newFiles = Array.from(oEvent.getParameter("files") || []);
-},
 
-onAddFiles: function() {
-    const oModel = this.getView().getModel();
-    let aFiles = oModel.getProperty("/uploadedFiles") || [];
 
-    this._newFiles.forEach(file => {
-        const bExists = aFiles.some(f => f.name === file.name && f.size === file.size);
-        if (!bExists) {
-            aFiles.push({
-                documentId: Date.now().toString() + Math.random(),
-                name: file.name,
-                type: file.type,
-                size: Math.round(file.size / 1024), // size in KB
-                file: file
+            ["inpSupplierName", "inpCountry", "inpFirstName", "inpEmail", "inpCategory"].forEach(id => {
+                let oInput = this.byId(id);
+                if (oInput) {
+                    oInput.attachChange(function (evt) {
+                        if (evt.getParameter("value")) {
+                            evt.getSource().setValueState("None");
+                        }
+                    });
+                }
             });
         }
-    });
+        ,
 
-    if (aFiles.length > 2) {
-        sap.m.MessageBox.warning("You can upload a maximum of 2 files.");
-        return;
-    }
+        onFileChange: function (oEvent) {
+            this._newFiles = Array.from(oEvent.getParameter("files") || []);
+        },
 
-    oModel.setProperty("/uploadedFiles", aFiles);
-    this._newFiles = [];
-},
+        onAddFiles: function () {
+            const oModel = this.getView().getModel();
+            let aFiles = oModel.getProperty("/uploadedFiles") || [];
 
-onFileDeleted: function(oEvent) {
-    const oContext = oEvent.getSource().getBindingContext();
-    const sDocId = oContext.getProperty("documentId");
+            const totalFiles = aFiles.length + this._newFiles.length;
+            if (totalFiles > 2) {
+                MessageBox.warning("You can upload a maximum of 2 files.");
+                return;
+            }
 
-    const oModel = this.getView().getModel();
-    let aFiles = oModel.getProperty("/uploadedFiles") || [];
-    aFiles = aFiles.filter(f => f.documentId !== sDocId);
-    oModel.setProperty("/uploadedFiles", aFiles);
-},
+            this._newFiles.forEach(file => {
+                const bExists = aFiles.some(f => f.name === file.name && f.size === file.size);
+                if (!bExists) {
+                    aFiles.push({
+                        documentId: Date.now().toString() + Math.random(),
+                        name: file.name,
+                        type: file.type,
+                        size: Math.round(file.size / 1024),
+                        file: file
+                    });
+                }
+            });
+
+            oModel.setProperty("/uploadedFiles", aFiles);
+            this._newFiles = [];
+            const oFileUploader = this.byId("fileUploader");
+            if (oFileUploader) oFileUploader.clear();
+
+
+        },
+
+
+        onFileDeleted: function (oEvent) {
+            const oContext = oEvent.getSource().getBindingContext();
+            const sDocId = oContext.getProperty("documentId");
+
+            const oModel = this.getView().getModel();
+            let aFiles = oModel.getProperty("/uploadedFiles") || [];
+            aFiles = aFiles.filter(f => f.documentId !== sDocId);
+            oModel.setProperty("/uploadedFiles", aFiles);
+        },
 
 
         // Reset form and clear files & model
@@ -133,22 +160,23 @@ onFileDeleted: function(oEvent) {
                 additionalInfo: { details: "" }
             });
 
-    this.getView().getModel().setProperty("/uploadedFiles", [])
+            this.getView().getModel().setProperty("/uploadedFiles", [])
+            const oFileUploader = this.byId("fileUploader");
+            if (oFileUploader) oFileUploader.clear();
 
         },
 
 
 
         onSaveSupplier: function () {
-            const oData = this.getView().getModel().getProperty("/supplierData");            
-            
+            const oData = this.getView().getModel().getProperty("/supplierData");
+
             const aUploaded1 = this.getView().getModel().getProperty("/uploadedFiles") || [];
-            console.log(aUploaded1,"A1");
+            console.log(aUploaded1, "A1");
             this._files = aUploaded1.map(f => f.file);
-            console.log(this._files,"A2");
-            
-            if(this._files.length > 2)
-            {
+            console.log(this._files, "A2");
+
+            if (this._files.length > 2) {
                 MessageBox.warning("Please add at max 2 files before saving.");
                 return;
             }
@@ -160,8 +188,8 @@ onFileDeleted: function(oEvent) {
             })
                 .then(res => res.json())
                 .then(result => {
+                    MessageBox.show(result.value);
 
-                    
                     if (this._files && this._files.length > 0) {
                         const formData = new FormData();
                         formData.append("supplierName", oData.supplierName);
@@ -178,7 +206,7 @@ onFileDeleted: function(oEvent) {
                 })
                 .then(res => res ? res.json() : null)
                 .then(r => {
-
+                    console.log(r.value);
                     // ✅ Reset wizard after upload
                     this._resetForm();
                     const oWizard = this.byId("createWizard");
