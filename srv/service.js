@@ -46,7 +46,7 @@ app.post('/uploadattachments', async (req, res) => {
   if (req.files && req.files.files) {
     // Normalize to array (even if only 1 file)
     const files = Array.isArray(req.files.files) ? req.files.files : [req.files.files];
-
+    console.log(files);
     // Save all attachments
     for (const uploadedFile of files) {
       const base64Content = uploadedFile.data.toString('base64');
@@ -165,7 +165,7 @@ app.post('/bpa-callback', async (req, res) => {
     if (next) {
       await triggerNextApprover(suppliername);
     } else {
-      const vendor = await SELECT.one.from('my.supplier.Supplier').where({ suppliername });
+      const vendor = await SELECT.one.from('my.supplier.Supplier').where({ supplierName:suppliername });
       await createBusinessPartnerInS4(vendor);
       return res.send({ message: "All levels approved." });
     }
@@ -178,21 +178,21 @@ app.post('/bpa-callback', async (req, res) => {
 });
 
 
-const { apiBusinessPartner } = require('./src/generated/A_BUSINESS_PARTNER');
+const { aBusinessPartner } = require('./src/generated/A_BUSINESS_PARTNER');
 
 async function createBusinessPartnerInS4(vendor) {
-  const { businessPartnerApi } = apiBusinessPartner();
+  const { businessPartnerApi } = aBusinessPartner();
 
 try {
   const partnerEntity = businessPartnerApi.entityBuilder()
     .businessPartnerCategory("2")
     .businessPartnerGrouping("BP02")
-    .firstName(vendor.suppliername)
-    .personFullName(vendor.suppliername)
-    .businessPartnerFullName(vendor.suppliername)
+    .firstName(vendor.supplierName)
+    .personFullName(vendor.supplierName)
+    .businessPartnerFullName(vendor.supplierName)
     .nameCountry("US")
-    .businessPartnerName(vendor.suppliername)
-    .organizationBpName1(vendor.suppliername)
+    .businessPartnerName(vendor.supplierName)
+    .organizationBpName1(vendor.supplierName)
     .build(); 
 
   console.log("Payload:", partnerEntity);

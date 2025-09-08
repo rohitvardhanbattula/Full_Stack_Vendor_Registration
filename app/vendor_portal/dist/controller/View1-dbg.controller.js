@@ -6,41 +6,59 @@ sap.ui.define([
     "sap/ui/core/Fragment"
 ], function (Controller, MessageToast, JSONModel, MessageBox, Fragment) {
     "use strict";
-
     return Controller.extend("vendorportal.controller.View1", {
         getURL: function () {
             return sap.ui.require.toUrl("vendorportal");
         },
+        _validateInputs: function (aInputIds) {
+            let bValid = true;
+
+            aInputIds.forEach(id => {
+                let oInput = this.byId(id);
+                if (oInput) {
+                    if (!oInput.getValue()) {
+                        oInput.setValueState("Error");
+                        oInput.setValueStateText(oInput.getPlaceholder() || "This field is required.");
+                        bValid = false;
+                    } else {
+                        oInput.setValueState("None");
+                    }
+                }
+            });
+
+            return bValid;
+        },
+
         onNextStep1: function () {
-            let sName = this.byId("inpSupplierName").getValue();
-            if (!sName) {
-                sap.m.MessageBox.warning("Supplier Name is required.");
-                return;
+            let bValid = this._validateInputs(["inpSupplierName", "inpCountry"]);
+            if (bValid) {
+                this.byId("createWizard").nextStep();
             }
-            this.byId("createWizard").nextStep();
         },
 
         onNextStep2: function () {
-            let sFirst = this.byId("inpFirstName").getValue();
-            let sEmail = this.byId("inpEmail").getValue();
-            if (!sFirst || !sEmail) {
-                sap.m.MessageBox.warning("First Name and Email are required.");
-                return;
+            let bValid = this._validateInputs(["inpFirstName", "inpEmail"]);
+            if (bValid) {
+                this.byId("createWizard").nextStep();
             }
-            this.byId("createWizard").nextStep();
         },
 
         onNextStep3: function () {
-            let sCategory = this.byId("inpCategory").getValue();
-            if (!sCategory) {
-                sap.m.MessageBox.warning("Category is required.");
-                return;
+            let bValid = this._validateInputs(["inpCategory"]);
+            if (bValid) {
+                this.byId("createWizard").nextStep();
             }
-            this.byId("createWizard").nextStep();
         },
 
         onNextStep4: function () {
             // You can validate file uploads if required
+
+            const aUploaded = this.getView().getModel().getProperty("/uploadedFiles") || [];
+            console.log("AP",aUploaded.length);
+            if (aUploaded.length > 2) {
+                sap.m.MessageBox.warning("You have uploaded more than 2 files. Please remove extra files before proceeding.");
+                return; // block navigation if more than 2 files
+            }
             this.byId("createWizard").nextStep();
 
             // ✅ Enable Create Supplier button at last step
@@ -57,26 +75,84 @@ sap.ui.define([
                     categoryAndRegion: { category: "", region: "" },
                     additionalInfo: { details: "" }
                 },
-                suppliers: []
+                suppliers: [],
+                uploadedFiles: []
             });
             this.getView().setModel(oModel);
+        }
+        ,
+       
+onFileChange: function(oEvent) {
+    this._newFiles = Array.from(oEvent.getParameter("files") || []);
+},
+
+onAddFiles: function() {
+    const oModel = this.getView().getModel();
+    let aFiles = oModel.getProperty("/uploadedFiles") || [];
+
+    this._newFiles.forEach(file => {
+        const bExists = aFiles.some(f => f.name === file.name && f.size === file.size);
+        if (!bExists) {
+            aFiles.push({
+                documentId: Date.now().toString() + Math.random(),
+                name: file.name,
+                type: file.type,
+                size: Math.round(file.size / 1024), // size in KB
+                file: file
+            });
+        }
+    });
+
+    if (aFiles.length > 2) {
+        sap.m.MessageBox.warning("You can upload a maximum of 2 files.");
+        return;
+    }
+
+    oModel.setProperty("/uploadedFiles", aFiles);
+    this._newFiles = [];
+},
+
+onFileDeleted: function(oEvent) {
+    const oContext = oEvent.getSource().getBindingContext();
+    const sDocId = oContext.getProperty("documentId");
+
+    const oModel = this.getView().getModel();
+    let aFiles = oModel.getProperty("/uploadedFiles") || [];
+    aFiles = aFiles.filter(f => f.documentId !== sDocId);
+    oModel.setProperty("/uploadedFiles", aFiles);
+},
+
+
+        // Reset form and clear files & model
+        _resetForm: function () {
+            this.getView().getModel().setProperty("/supplierData", {
+                supplierName: "",
+                mainAddress: { street: "", line2: "", line3: "", city: "", postalCode: "", country: "", region: "" },
+                primaryContact: { firstName: "", lastName: "", email: "", phone: "" },
+                categoryAndRegion: { category: "", region: "" },
+                additionalInfo: { details: "" }
+            });
+
+    this.getView().getModel().setProperty("/uploadedFiles", [])
+
         },
 
 
-        onFileChange: function (oEvent) {
-            this._files = oEvent.getParameter("files") || [];
-
-
-            MessageToast.show(`${this._files.length} file(s) selected.`);
-        },
 
         onSaveSupplier: function () {
-            const oData = this.getView().getModel().getProperty("/supplierData");
-            if (!oData.supplierName) {
-                MessageBox.warning("Please enter Supplier Name before saving.");
+            const oData = this.getView().getModel().getProperty("/supplierData");            
+            
+            const aUploaded1 = this.getView().getModel().getProperty("/uploadedFiles") || [];
+            console.log(aUploaded1,"A1");
+            this._files = aUploaded1.map(f => f.file);
+            console.log(this._files,"A2");
+            
+            if(this._files.length > 2)
+            {
+                MessageBox.warning("Please add at max 2 files before saving.");
                 return;
             }
-
+            sap.ui.core.BusyIndicator.show(0);
             fetch(this.getURL() + `/odata/v4/supplier/createSupplierWithFiles`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -84,29 +160,26 @@ sap.ui.define([
             })
                 .then(res => res.json())
                 .then(result => {
-                    MessageToast.show(result.value);
 
-                    // ✅ Upload all files in a single request
+                    
                     if (this._files && this._files.length > 0) {
                         const formData = new FormData();
                         formData.append("supplierName", oData.supplierName);
 
                         Array.from(this._files).forEach(file => {
-                            formData.append("files", file); // 👈 all under "files"
+                            formData.append("files", file);
                         });
 
-                        fetch(this.getURL() + `/uploadattachments`, {
+                        return fetch(this.getURL() + `/uploadattachments`, {
                             method: "POST",
                             body: formData
-                        })
-                            .then(res => res.json())
-                            .then(r => {
-                                MessageToast.show(r.message);
-                            })
-                            .catch(err => MessageBox.error("File upload error: " + err.message));
+                        });
                     }
+                })
+                .then(res => res ? res.json() : null)
+                .then(r => {
 
-                    // ✅ Reset wizard
+                    // ✅ Reset wizard after upload
                     this._resetForm();
                     const oWizard = this.byId("createWizard");
                     if (oWizard) {
@@ -116,22 +189,12 @@ sap.ui.define([
                 })
                 .catch(err => {
                     MessageBox.error("Error saving supplier: " + err.message);
+                })
+                .finally(() => {
+                    sap.ui.core.BusyIndicator.hide();
                 });
-
-        },
-
-        _resetForm: function () {
-            this.getView().getModel().setProperty("/supplierData", {
-                supplierName: "",
-                mainAddress: { street: "", line2: "", line3: "", city: "", postalCode: "", country: "", region: "" },
-                primaryContact: { firstName: "", lastName: "", email: "", phone: "" },
-                categoryAndRegion: { category: "", region: "" },
-                additionalInfo: { details: "" }
-            });
-            this._files = [];
-            const oFileUploader = this.byId("fileUploader");
-            if (oFileUploader) oFileUploader.clear();
-        },
+        }
+        ,
 
         onOpenSupplierList: function () {
             const oView = this.getView();
