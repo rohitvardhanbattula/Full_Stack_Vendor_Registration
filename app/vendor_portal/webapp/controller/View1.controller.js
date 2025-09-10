@@ -109,11 +109,13 @@ sap.ui.define([
 
         onAddFiles: function () {
             const oModel = this.getView().getModel();
+            const oFileUploader = this.byId("fileUploader");
             let aFiles = oModel.getProperty("/uploadedFiles") || [];
 
             const totalFiles = aFiles.length + this._newFiles.length;
             if (totalFiles > 2) {
                 MessageBox.warning("You can upload a maximum of 2 files.");
+                if (oFileUploader) oFileUploader.clear();
                 return;
             }
 
@@ -132,7 +134,7 @@ sap.ui.define([
 
             oModel.setProperty("/uploadedFiles", aFiles);
             this._newFiles = [];
-            const oFileUploader = this.byId("fileUploader");
+            
             if (oFileUploader) oFileUploader.clear();
 
 
