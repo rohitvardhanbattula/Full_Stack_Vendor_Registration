@@ -1,0 +1,23 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+    <Dialog id="updateApproverDialog" title="Update Approver">
+        <VBox class="sapUiSmallMargin">
+            <Label text="Name"/>
+            <Input id="inputName1" placeholder="Enter Name"/>
+            
+            <Label text="Email"/>
+            <Input id="inputEmail1" type="Email" placeholder="Enter Email"/>
+            
+            <Label text="Level"/>
+            <Input id="inputLevel1" placeholder="Enter Level"/>
+            
+            <Label text="Country"/>
+            <Input id="inputCountry1" placeholder="Enter Country"/>
+        </VBox>
+        <beginButton>
+            <Button text="Update" type="Emphasized" press="onSaveUpdateApprover"/>
+        </beginButton>
+        <endButton>
+            <Button text="Cancel" press="onCancelUpdateApprover"/>
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>

@@ -154,7 +154,11 @@ app.post('/bpa-callback', async (req, res) => {
             })
             .where({ sup_name: suppliername, level: approver.level });
         }
+
       }
+      await UPDATE('my.supplier.Supplier')
+      .set({  status:"REJECTED"})
+      .where({ supplierName: suppliername });
       return res.send({ message: "Approval rejected." });
     }
 
@@ -205,7 +209,7 @@ try {
   console.log("Business Partner created:", result);
   const bpId = result.businessPartner;
    await UPDATE('my.supplier.Supplier')
-      .set({ businessPartnerId: bpId })
+      .set({ businessPartnerId: bpId , status:"APPROVED"})
       .where({ supplierName: vendor.supplierName });
   return result;
 } catch (error) {
@@ -238,7 +242,7 @@ async function startBPAWorkflow({ name, email, country, phone, status, approver_
   {
     method: 'POST',
     url: "/",
-    headers: {   // ✅ move headers here
+    headers: { 
       'Content-Type': 'application/json'
     },
     data: {
@@ -302,7 +306,8 @@ module.exports = cds.service.impl(function () {
       await INSERT.into('my.supplier.Supplier').entries({
         ID: supplierId,
         supplierName: supplierData.supplierName,
-        businessPartnerId   : "",
+        status:"PENDING",
+        businessPartnerId   : "-",
         mainAddress_ID: addressId,
         primaryContact_ID: contactId,
         categoryAndRegion_ID: catRegId,
@@ -340,6 +345,26 @@ module.exports = cds.service.impl(function () {
     }
   });
 
+
+  this.on("resetAllData", async () => {
+  try {
+    
+    await DELETE.from("my.supplier.Attachment");
+    await DELETE.from("my.supplier.ApproverComment");
+    await DELETE.from("my.supplier.Approver");
+    await DELETE.from("my.supplier.Supplier");
+    await DELETE.from("my.supplier.Address");
+    await DELETE.from("my.supplier.Contact");
+    await DELETE.from("my.supplier.CategoryRegion");
+    await DELETE.from("my.supplier.AdditionalInfo");
+
+    return "All data deleted successfully!";
+  } catch (e) {
+    return `Error deleting data: ${e.message}`;
+  }
+});
+
+  
   this.on("approverentry", async (req) => {
     try {
       const { approverentry } = req.data;
@@ -359,6 +384,31 @@ module.exports = cds.service.impl(function () {
       return req.error(500, "Error inserting approver entry: " + e.message);
     }
   });
+
+  this.on("approverupdateentry", async (req) => {
+  try {
+    const { approverentry } = req.data;
+    const { level, country } = approverentry;
+
+    // check if record exists
+    const exists = await SELECT.one.from("my.supplier.Approver")
+      .where({ level: level, country: country });
+
+    if (!exists) {
+      return req.error(404, `No approver found for Level ${level} and Country ${country}`);
+    }
+
+    
+    await UPDATE("my.supplier.Approver")
+      .set(approverentry)
+      .where({ level: level, country: country });
+
+    return `Approver entry updated successfully for Level ${level}, Country ${country}`;
+  } catch (e) {
+    return req.error(500, "Error updating approver entry: " + e.message);
+  }
+});
+
 
   this.on('Approvals', async (req) => {
     const { suppliername } = req.data;

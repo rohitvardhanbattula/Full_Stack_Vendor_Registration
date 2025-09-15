@@ -1,0 +1,75 @@
+<mvc:View
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    controllerName="vendorportal.controller.SupplierList">
+
+    <Page id="supplierPage" title="Suppliers" showNavButton="true" navButtonPress=".onNavBack">
+        <content>
+            <VBox class="sapUiSmallMargin">
+
+                <!-- 🔹 Filter Bar -->
+                <Toolbar>
+                    <Title text="Filters" level="H3"/>
+
+                    <!-- Supplier Name -->
+                    <Label text="Name" class="sapUiSmallMarginBegin"/>
+                    <SearchField id="filterName" width="150px" liveChange=".onFilterSuppliers"/>
+
+                    <!-- City -->
+                    <Label text="City" class="sapUiSmallMarginBegin"/>
+                    <SearchField id="filterCity" width="150px" liveChange=".onFilterSuppliers"/>
+
+                    <!-- Status -->
+                    <Label text="Status" class="sapUiSmallMarginBegin"/>
+                    <Select id="filterStatus" change=".onFilterSuppliers" width="150px">
+                        <items>
+                            <core:Item key="" text="All"/>
+                            <core:Item key="APPROVED" text="Approved"/>
+                            <core:Item key="REJECTED" text="Rejected"/>
+                            <core:Item key="PENDING" text="Pending"/>
+                        </items>
+                    </Select>
+
+                    <ToolbarSpacer/>
+                    <Button text="Clear Filters" press=".onClearFilters"/>
+                </Toolbar>
+
+                <!-- 🔹 Suppliers Table -->
+                <Table id="supplierTable" items="{/suppliers}" inset="false">
+                    <columns>
+                        <Column><Text text="Name"/></Column>
+                        <Column><Text text="City"/></Column>
+                        <Column><Text text="Contact Email"/></Column>
+                        <Column><Text text="Actions"/></Column>
+                        <Column><Text text="Status"/></Column>
+                    </columns>
+                    <items>
+                        <ColumnListItem>
+                            <cells>
+                                <Text text="{supplierName}"/>
+                                <Text text="{mainAddress/city}"/>
+                                <Text text="{primaryContact/email}"/>
+                                <HBox>
+                                    <Button text="View" press=".onViewSupplier" type="Transparent"/>
+                                </HBox>
+                                <HBox>
+                                    <Button text="{status}" press=".onViewStatus"
+    type="{
+        path: 'status',
+        formatter: '.formatStatusType'
+    }"/>
+                                </HBox>
+                            </cells>
+                        </ColumnListItem>
+                    </items>
+                </Table>
+            </VBox>
+        </content>
+    </Page>
+</mvc:View>
+
+                            
+
+
+                       

@@ -39,40 +39,30 @@ sap.ui.define([
 
 
         onNextStep1: function () {
-            let bValid = this._validateInputs(["inpSupplierName", "inpCountry"]);
-            if (bValid) {
-                this.byId("createWizard").nextStep();
-            }
-        },
-
-        onNextStep2: function () {
-            let bValid = this._validateInputs(["inpFirstName", "inpEmail"]);
-            if (bValid) {
-                this.byId("createWizard").nextStep();
-            }
-        },
-
-        onNextStep3: function () {
-            let bValid = this._validateInputs(["inpCategory"]);
-            if (bValid) {
-                this.byId("createWizard").nextStep();
-            }
-        },
-
-        onNextStep4: function () {
-            // You can validate file uploads if required
-
-            const aUploaded = this.getView().getModel().getProperty("/uploadedFiles") || [];
-            console.log("AP", aUploaded.length);
-            if (aUploaded.length > 2) {
-                sap.m.MessageBox.warning("You have uploaded more than 2 files. Please remove extra files before proceeding.");
-                return; // block navigation if more than 2 files
-            }
-            this.byId("createWizard").nextStep();
-
-            // ✅ Enable Create Supplier button at last step
-            this.byId("btnCreateSupplier").setEnabled(true);
-        },
+    if (this._validateInputs(["inpSupplierName", "inpCountry"])) {
+        this.byId("createWizard").nextStep();
+    }
+},
+onNextStep2: function () {
+    if (this._validateInputs(["inpFirstName", "inpEmail"])) {
+        this.byId("createWizard").nextStep();
+    }
+},
+onNextStep3: function () {
+    if (this._validateInputs(["inpCategory"])) {
+        this.byId("createWizard").nextStep();
+    }
+},
+onNextStep4: function () {
+    const aUploaded = this.getView().getModel().getProperty("/uploadedFiles") || [];
+    if (aUploaded.length > 2) {
+        sap.m.MessageBox.warning("You have uploaded more than 2 files. Please remove extra files before proceeding.");
+        return;
+    }
+    this.byId("createWizard").nextStep();
+    this.byId("btnCreateSupplier").setEnabled(true);
+}
+,
 
         onInit: function () {
             const oModel = new JSONModel({
@@ -109,11 +99,13 @@ sap.ui.define([
 
         onAddFiles: function () {
             const oModel = this.getView().getModel();
+            const oFileUploader = this.byId("fileUploader");
             let aFiles = oModel.getProperty("/uploadedFiles") || [];
 
             const totalFiles = aFiles.length + this._newFiles.length;
             if (totalFiles > 2) {
                 MessageBox.warning("You can upload a maximum of 2 files.");
+                if (oFileUploader) oFileUploader.clear();
                 return;
             }
 
@@ -132,7 +124,7 @@ sap.ui.define([
 
             oModel.setProperty("/uploadedFiles", aFiles);
             this._newFiles = [];
-            const oFileUploader = this.byId("fileUploader");
+            
             if (oFileUploader) oFileUploader.clear();
 
 
@@ -225,22 +217,7 @@ sap.ui.define([
         ,
 
         onOpenSupplierList: function () {
-            const oView = this.getView();
-            if (!this._oSupplierDialog) {
-                Fragment.load({
-                    id: oView.getId(),
-                    name: "vendorportal.view.SupplierList",
-                    controller: this
-                }).then(oDialog => {
-                    this._oSupplierDialog = oDialog;
-                    oView.addDependent(this._oSupplierDialog);
-                    this._fetchSuppliers();
-                    this._oSupplierDialog.open();
-                });
-            } else {
-                this._fetchSuppliers();
-                this._oSupplierDialog.open();
-            }
+            this.getOwnerComponent().getRouter().navTo("SupplierList");
         },
 
         onCloseSupplierList: function () {
@@ -415,7 +392,65 @@ sap.ui.define([
                 this.byId("createApproverDialog").open();
             }
         },
+        onUpdateApprover: function () {
+            var oView = this.getView();
 
+            if (!this.byId("updateApproverDialog")) {
+                Fragment.load({
+                    id: oView.getId(),
+                    name: "vendorportal.view.UpdateApprover",
+                    controller: this
+                }).then(function (oDialog) {
+                    oView.addDependent(oDialog);
+                    oDialog.open();
+                });
+            } else {
+                this.byId("updateApproverDialog").open();
+            }
+        },
+        onSaveUpdateApprover: async function () {
+            try {
+                const level = this.byId("inputLevel1").getValue();
+
+                const country = this.byId("inputCountry1").getValue();
+                const name = this.byId("inputName1").getValue();
+                const email = this.byId("inputEmail1").getValue();
+
+                if (!level || !country || !name || !email) {
+                    MessageBox.warning("Please fill all required fields.");
+                    return;
+                }
+
+                const body = {
+                    approverentry: {
+                        level: level,
+                        country: country,
+                        name: name,
+                        email: email
+                    }
+                };
+
+                const response = await fetch(this.getURL() + `/odata/v4/supplier/approverupdateentry`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(body)
+                });
+
+                const result = await response.json();
+                this.byId("inputLevel1").setValue("");
+            this.byId("inputCountry1").setValue("");
+            this.byId("inputName1").setValue("");
+            this.byId("inputEmail1").setValue("");
+                if (response.ok) {
+                    MessageToast.show(result.value);
+                    this.byId("updateApproverDialog").close(); // ✅ consistent
+                } else {
+                    MessageBox.error(result.error?.message || "Failed to update approver");
+                }
+            } catch (e) {
+                MessageBox.error("Error: " + e.message);
+            }
+        },
         // Save new approver
         onSaveApprover: async function () {
             try {
@@ -446,7 +481,10 @@ sap.ui.define([
                 });
 
                 const result = await response.json();
-
+                this.byId("inputLevel").setValue("");
+            this.byId("inputCountry").setValue("");
+            this.byId("inputName").setValue("");
+            this.byId("inputEmail").setValue("");
                 if (response.ok) {
                     MessageToast.show(result.value);
                     this.byId("createApproverDialog").close(); // ✅ consistent
@@ -462,6 +500,10 @@ sap.ui.define([
         // Cancel creation
         onCancelApprover: function () {
             this.byId("createApproverDialog").close();
+        },
+
+        onCancelUpdateApprover: function () {
+            this.byId("updateApproverDialog").close();
         }
 
 

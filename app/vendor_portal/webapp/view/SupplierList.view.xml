@@ -1,0 +1,91 @@
+<mvc:View
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    controllerName="vendorportal.controller.SupplierList">
+
+    <Page
+        id="supplierPage"
+        title="Suppliers"
+        showNavButton="true"
+        navButtonPress=".onNavBack"
+        class="sapUiContentPadding">
+
+        <!-- FILTER BAR -->
+        <headerContent>
+            <Toolbar>
+                <Label text="Name" labelFor="filterName" />
+                <SearchField id="filterName" width="150px" liveChange=".onFilterSuppliers" />
+
+                <Label text="City" labelFor="filterCity" />
+                <SearchField id="filterCity" width="150px" liveChange=".onFilterSuppliers" />
+
+                <Label text="Status" labelFor="filterStatus" />
+                <Select id="filterStatus" change=".onFilterSuppliers" width="150px">
+                    <items>
+                        <core:Item key="" text="All" />
+                        <core:Item key="APPROVED" text="Approved" />
+                        <core:Item key="REJECTED" text="Rejected" />
+                        <core:Item key="PENDING" text="Pending" />
+                    </items>
+                </Select>
+
+                <ToolbarSpacer />
+                <Button text="Clear Filters" press=".onClearFilters" type="Transparent" />
+            </Toolbar>
+        </headerContent>
+
+        <!-- SUPPLIER TABLE -->
+        <content>
+            <Table
+                id="supplierTable"
+                items="{/suppliers}"
+                alternateRowColors="true">
+
+                <columns>
+                    <Column minScreenWidth="Tablet" demandPopin="true">
+                        <Text text="Name" />
+                    </Column>
+                    <Column minScreenWidth="Tablet" demandPopin="true">
+                        <Text text="City" />
+                    </Column>
+                    <Column minScreenWidth="Desktop" demandPopin="false">
+                        <Text text="Contact Email" />
+                    </Column>
+                    <!-- CENTERED STATUS COLUMN -->
+                    <Column hAlign="Center" minScreenWidth="Tablet" demandPopin="true">
+                        <Text text="Status" />
+                    </Column>
+                    <Column hAlign="End">
+                        <Text text="Actions" />
+                    </Column>
+                </columns>
+
+                <items>
+                    <ColumnListItem type="Active">
+    <cells>
+        <HBox fitContainer="true" justifyContent="Start">
+            <Text text="{supplierName}" />
+        </HBox>
+        <HBox fitContainer="true" justifyContent="Start">
+            <Text text="{mainAddress/city}" />
+        </HBox>
+        <HBox fitContainer="true" justifyContent="Start">
+            <Text text="{primaryContact/email}" />
+        </HBox>
+        <HBox fitContainer="true" justifyContent="Center">
+            <Button text="{status}" press=".onViewStatus"
+                    type="{ path: 'status', formatter: '.formatStatusType' }"/>
+        </HBox>
+        <HBox fitContainer="true" justifyContent="End">
+            <Button icon="sap-icon://inspect" tooltip="View Details"
+                    press=".onViewSupplier" type="Transparent" />
+        </HBox>
+    </cells>
+</ColumnListItem>
+
+                </items>
+            </Table>
+        </content>
+    </Page>
+</mvc:View>

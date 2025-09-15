@@ -23,12 +23,12 @@
         </fd:title>
 
         <fd:content>
-            <VBox class="sapUiSmallMargin">
+            
 
-                <Wizard id="createWizard" showNextButton="false">
+                <Wizard id="createWizard" showNextButton="false" height="100%">
 
                     <WizardStep id="step1" title="Supplier Details">
-                        <VBox>
+                       
                             <fl:SimpleForm editable="true" layout="ResponsiveGridLayout">
                                 <Label text="Supplier Name"/>
                                 <Input id="inpSupplierName" value="{/supplierData/supplierName}" required="true"/>
@@ -48,11 +48,11 @@
                                 <Input value="{/supplierData/mainAddress/region}"/>
                             </fl:SimpleForm>
                             <Button text="Next" type="Emphasized" press="onNextStep1"/>
-                        </VBox>
+                        
                     </WizardStep>
 
                     <WizardStep id="step2" title="Contact Details">
-                        <VBox>
+                        
                             <fl:SimpleForm editable="true">
                                 <Label text="First Name"/>
                                 <Input id="inpFirstName" value="{/supplierData/primaryContact/firstName}" required="true"/>
@@ -64,11 +64,11 @@
                                 <Input value="{/supplierData/primaryContact/phone}" type="Tel"/>
                             </fl:SimpleForm>
                             <Button text="Next" type="Emphasized" press="onNextStep2"/>
-                        </VBox>
+                        
                     </WizardStep>
 
                     <WizardStep id="step3" title="Category and Additional Info">
-                        <VBox>
+
                             <fl:SimpleForm editable="true">
                                 <Label text="Category"/>
                                 <Input id="inpCategory" value="{/supplierData/categoryAndRegion/category}" required="true"/>
@@ -78,11 +78,11 @@
                                 <TextArea value="{/supplierData/additionalInfo/details}" rows="3"/>
                             </fl:SimpleForm>
                             <Button text="Next" type="Emphasized" press="onNextStep3"/>
-                        </VBox>
+                        
                     </WizardStep>
 
                     <WizardStep id="step4" title="Upload Attachments">
-                         <VBox class="sapUiSmallMargin">
+                         <VBox class="sapUiSmallMargin" id="step4Content" visible="true">
 
         <HBox class="sapUiSmallMarginTop" justifyContent="Start" alignItems="Center">
             <u:FileUploader 
@@ -132,14 +132,79 @@
 
                     <WizardStep id="step5" title="Review &amp; Submit" validated="true">
                         <VBox>
-                            <Text text="Please review all details before creating supplier."/>
+                            <Panel headerText="Supplier Details" expandable="true" expanded="true" class="sapUiSmallMarginBottom">
+        <fl:SimpleForm editable="false" layout="ResponsiveGridLayout" labelSpanXL="3" labelSpanL="3" labelSpanM="3" labelSpanS="12">
+            <Label text="Supplier Name"/>
+            <Text text="{/supplierData/supplierName}"/>
+            <Label text="Street"/>
+            <Text text="{/supplierData/mainAddress/street}"/>
+            <Label text="Line 2"/>
+            <Text text="{/supplierData/mainAddress/line2}"/>
+            <Label text="Line 3"/>
+            <Text text="{/supplierData/mainAddress/line3}"/>
+            <Label text="City"/>
+            <Text text="{/supplierData/mainAddress/city}"/>
+            <Label text="Postal Code"/>
+            <Text text="{/supplierData/mainAddress/postalCode}"/>
+            <Label text="Country"/>
+            <Text text="{/supplierData/mainAddress/country}"/>
+            <Label text="Region"/>
+            <Text text="{/supplierData/mainAddress/region}"/>
+        </fl:SimpleForm>
+    </Panel>
+
+    
+    <Panel headerText="Contact Details" expandable="true" expanded="true" class="sapUiSmallMarginBottom">
+        <fl:SimpleForm editable="false" layout="ResponsiveGridLayout" labelSpanXL="3" labelSpanL="3" labelSpanM="3" labelSpanS="12">
+            <Label text="First Name"/>
+            <Text text="{/supplierData/primaryContact/firstName}"/>
+            <Label text="Last Name"/>
+            <Text text="{/supplierData/primaryContact/lastName}"/>
+            <Label text="Email"/>
+            <Text text="{/supplierData/primaryContact/email}"/>
+            <Label text="Phone"/>
+            <Text text="{/supplierData/primaryContact/phone}"/>
+        </fl:SimpleForm>
+    </Panel>
+
+    
+    <Panel headerText="Category &amp; Additional Info" expandable="true" expanded="true" class="sapUiSmallMarginBottom">
+        <fl:SimpleForm editable="false" layout="ResponsiveGridLayout" labelSpanXL="3" labelSpanL="3" labelSpanM="3" labelSpanS="12">
+            <Label text="Category"/>
+            <Text text="{/supplierData/categoryAndRegion/category}"/>
+            <Label text="Region"/>
+            <Text text="{/supplierData/categoryAndRegion/region}"/>
+            <Label text="Additional Info"/>
+            <Text text="{/supplierData/additionalInfo/details}"/>
+        </fl:SimpleForm>
+    </Panel>
+
+    
+    <Panel headerText="Uploaded Attachments" expandable="true" expanded="true" class="sapUiSmallMarginBottom">
+        <Table items="{/uploadedFiles}">
+            <columns>
+                <Column><Text text="File Name"/></Column>
+                <Column><Text text="Type"/></Column>
+                <Column><Text text="Size (KB)"/></Column>
+            </columns>
+            <items>
+                <ColumnListItem>
+                    <cells>
+                        <Text text="{name}"/>
+                        <Text text="{type}"/>
+                        <Text text="{size}"/>
+                    </cells>
+                </ColumnListItem>
+            </items>
+        </Table>
+    </Panel>
                             <HBox justifyContent="End" class="sapUiSmallMarginTop">
                                 <Button id="btnCreateSupplier" text="Create Supplier" type="Emphasized" press="onSaveSupplier" enabled="false"/>
                             </HBox>
                         </VBox>
                     </WizardStep>
                 </Wizard>
-            </VBox>
+            
         </fd:content>
     </fd:DynamicPage>
 </mvc:View>

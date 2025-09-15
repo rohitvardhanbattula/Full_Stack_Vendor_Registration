@@ -4,6 +4,7 @@ using { cuid } from '@sap/cds/common';
 
 entity Supplier : cuid {
     key supplierName      : String(200) @cds.persistence.unique;
+        status             : String(100);
         businessPartnerId   : String;
         mainAddress       : Association to Address;
         primaryContact    : Association to Contact;

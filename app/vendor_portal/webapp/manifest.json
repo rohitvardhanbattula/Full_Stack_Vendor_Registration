@@ -105,20 +105,25 @@
         "viewPath": "vendorportal.view"
       },
       "routes": [
-        {
-          "name": "RouteView1",
-          "pattern": ":?query:",
-          "target": [
-            "TargetView1"
-          ]
-        }
-      ],
-      "targets": {
-        "TargetView1": {
-          "id": "View1",
-          "name": "View1"
-        }
-      }
+    {
+      "pattern": "",
+      "name": "View1",
+      "target": "View1"
+    },
+    {
+      "pattern": "suppliers",
+      "name": "SupplierList",
+      "target": "SupplierList"
+    }
+  ],
+  "targets": {
+    "View1": {
+      "viewName": "View1"
+    },
+    "SupplierList": {
+      "viewName": "SupplierList"
+    }
+  }
     },
     "rootView": {
       "viewName": "vendorportal.view.App",

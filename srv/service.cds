@@ -7,6 +7,7 @@ type approverinput {
 
 type SupplierInput {
     supplierName      : String(200);
+    status: String(100);
     businessPartnerId   : String;
     mainAddress       : AddressInput;
     primaryContact    : ContactInput;
@@ -46,6 +47,7 @@ service SupplierService {
     function Approvers()                                          returns array of approverinput;
 
     action   approverentry(approverentry: approverinput)          returns String;
+    action   approverupdateentry(approverentry: approverinput)          returns String;
     action   createSupplierWithFiles(supplierData: SupplierInput) returns String;
 
     function downloadAttachments(supplierName: String)            returns array of {
@@ -53,7 +55,7 @@ service SupplierService {
         mimeType : String;
         content  : LargeBinary;
     };
-
+    function resetAllData() returns String;
     function Approvals(suppliername : String)                          returns array of {
     level : String;
     email  : String;

@@ -6,7 +6,7 @@
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
-    "@cap-js/hana": "^2",
+    "@cap-js/hana": "^2.2.0",
     "@sap-cloud-sdk/connectivity": "^3",
     "@sap-cloud-sdk/http-client": "^4.1.1",
     "@sap-cloud-sdk/odata-v2": "^4.1.1",

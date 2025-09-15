@@ -6,6 +6,7 @@
                     <Toolbar>
                         <Title text="Approvers"/>
                         <ToolbarSpacer/>
+                        <Button text="Update Approver" type="Emphasized" press="onUpdateApprover"/>
                         <Button text="Create Approver" type="Emphasized" press="onCreateApprover"/>
                     </Toolbar>
                 </headerToolbar>
