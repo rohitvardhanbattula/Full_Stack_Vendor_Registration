@@ -36,16 +36,29 @@ onExit: function () {
         },
 
         _fetchSuppliers: function () {
-            fetch(this.getURL() + `/odata/v4/supplier/getsuppliers`)
-                .then(res => res.json())
-                .then(data => {
-                    const suppliers = Array.isArray(data.value) ? data.value : data;
-                    this.getView().setModel(new JSONModel({ suppliers: suppliers }));
-                })
-                .catch(err => {
-                    MessageBox.error("Error fetching suppliers: " + err.message);
-                });
-        },
+    const oView = this.getView();
+    const oTable = oView.byId("supplierTable");
+    const oBinding = oTable ? oTable.getBinding("items") : null;
+    const oModel = oView.getModel() || new JSONModel({ suppliers: [] });
+    if (!oView.getModel()) oView.setModel(oModel);
+
+    const aCurrentFilters = oBinding ? oBinding.aFilters : [];
+
+    fetch(this.getURL() + `/odata/v4/supplier/getsuppliers`)
+        .then(res => res.json())
+        .then(data => {
+            const suppliers = Array.isArray(data.value) ? data.value : data;
+            oModel.setProperty("/suppliers", suppliers);
+
+            if (oBinding) {
+                oBinding.filter(aCurrentFilters);
+            }
+        })
+        .catch(err => {
+            MessageBox.error("Error fetching suppliers: " + err.message);
+        });
+},
+
 
          onViewSupplier: function (oEvent) {
             const oSupplier = oEvent.getSource().getBindingContext().getObject();

@@ -11,7 +11,6 @@
                     <Column><Text text="Approver Name"/></Column>
                     <Column><Text text="Comments"/></Column>
                     <Column><Text text="Status"/></Column>
-                    <Column><Text text="Approval Time"/></Column>
                 </columns>
                 <items>
                     <ColumnListItem>
@@ -22,7 +21,6 @@
                             <ObjectStatus text="{statusModel>status}"
                                           state="{= ${statusModel>status} === 'Approved' ? 'Success' : (${statusModel>status} === 'Rejected' ? 'Error' : 'Warning') }"/>
                             
-                            <Text text="{statusModel>updatedAt}" />
                         </cells>
                     </ColumnListItem>
                 </items>

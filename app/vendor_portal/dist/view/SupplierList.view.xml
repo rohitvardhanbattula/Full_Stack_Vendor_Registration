@@ -4,72 +4,88 @@
     xmlns:core="sap.ui.core"
     controllerName="vendorportal.controller.SupplierList">
 
-    <Page id="supplierPage" title="Suppliers" showNavButton="true" navButtonPress=".onNavBack">
-        <content>
-            <VBox class="sapUiSmallMargin">
+    <Page
+        id="supplierPage"
+        title="Suppliers"
+        showNavButton="true"
+        navButtonPress=".onNavBack"
+        class="sapUiContentPadding">
 
-                <!-- 🔹 Filter Bar -->
-                <Toolbar>
-                    <Title text="Filters" level="H3"/>
+        <!-- FILTER BAR -->
+        <headerContent>
+            <Toolbar>
+                <Label text="Name" labelFor="filterName" />
+                <SearchField id="filterName" width="150px" liveChange=".onFilterSuppliers" />
 
-                    <!-- Supplier Name -->
-                    <Label text="Name" class="sapUiSmallMarginBegin"/>
-                    <SearchField id="filterName" width="150px" liveChange=".onFilterSuppliers"/>
+                <Label text="City" labelFor="filterCity" />
+                <SearchField id="filterCity" width="150px" liveChange=".onFilterSuppliers" />
 
-                    <!-- City -->
-                    <Label text="City" class="sapUiSmallMarginBegin"/>
-                    <SearchField id="filterCity" width="150px" liveChange=".onFilterSuppliers"/>
-
-                    <!-- Status -->
-                    <Label text="Status" class="sapUiSmallMarginBegin"/>
-                    <Select id="filterStatus" change=".onFilterSuppliers" width="150px">
-                        <items>
-                            <core:Item key="" text="All"/>
-                            <core:Item key="APPROVED" text="Approved"/>
-                            <core:Item key="REJECTED" text="Rejected"/>
-                            <core:Item key="PENDING" text="Pending"/>
-                        </items>
-                    </Select>
-
-                    <ToolbarSpacer/>
-                    <Button text="Clear Filters" press=".onClearFilters"/>
-                </Toolbar>
-
-                <!-- 🔹 Suppliers Table -->
-                <Table id="supplierTable" items="{/suppliers}" inset="false">
-                    <columns>
-                        <Column><Text text="Name"/></Column>
-                        <Column><Text text="City"/></Column>
-                        <Column><Text text="Contact Email"/></Column>
-                        <Column><Text text="Actions"/></Column>
-                        <Column><Text text="Status"/></Column>
-                    </columns>
+                <Label text="Status" labelFor="filterStatus" />
+                <Select id="filterStatus" change=".onFilterSuppliers" width="150px">
                     <items>
-                        <ColumnListItem>
-                            <cells>
-                                <Text text="{supplierName}"/>
-                                <Text text="{mainAddress/city}"/>
-                                <Text text="{primaryContact/email}"/>
-                                <HBox>
-                                    <Button text="View" press=".onViewSupplier" type="Transparent"/>
-                                </HBox>
-                                <HBox>
-                                    <Button text="{status}" press=".onViewStatus"
-    type="{
-        path: 'status',
-        formatter: '.formatStatusType'
-    }"/>
-                                </HBox>
-                            </cells>
-                        </ColumnListItem>
+                        <core:Item key="" text="All" />
+                        <core:Item key="APPROVED" text="Approved" />
+                        <core:Item key="REJECTED" text="Rejected" />
+                        <core:Item key="PENDING" text="Pending" />
                     </items>
-                </Table>
-            </VBox>
+                </Select>
+
+                <ToolbarSpacer />
+                <Button text="Clear Filters" press=".onClearFilters" type="Transparent" />
+            </Toolbar>
+        </headerContent>
+
+        <!-- SUPPLIER TABLE -->
+        <content>
+            <Table
+                id="supplierTable"
+                items="{/suppliers}"
+                alternateRowColors="true">
+
+                <columns>
+                    <Column minScreenWidth="Tablet" demandPopin="true">
+                        <Text text="Name" />
+                    </Column>
+                    <Column minScreenWidth="Tablet" demandPopin="true">
+                        <Text text="City" />
+                    </Column>
+                    <Column minScreenWidth="Desktop" demandPopin="false">
+                        <Text text="Contact Email" />
+                    </Column>
+                    <!-- CENTERED STATUS COLUMN -->
+                    <Column hAlign="Center" minScreenWidth="Tablet" demandPopin="true">
+                        <Text text="Status" />
+                    </Column>
+                    <Column hAlign="End">
+                        <Text text="Actions" />
+                    </Column>
+                </columns>
+
+                <items>
+                    <ColumnListItem type="Active">
+    <cells>
+        <HBox fitContainer="true" justifyContent="Start">
+            <Text text="{supplierName}" />
+        </HBox>
+        <HBox fitContainer="true" justifyContent="Start">
+            <Text text="{mainAddress/city}" />
+        </HBox>
+        <HBox fitContainer="true" justifyContent="Start">
+            <Text text="{primaryContact/email}" />
+        </HBox>
+        <HBox fitContainer="true" justifyContent="Center">
+            <Button text="{status}" press=".onViewStatus"
+                    type="{ path: 'status', formatter: '.formatStatusType' }"/>
+        </HBox>
+        <HBox fitContainer="true" justifyContent="End">
+            <Button icon="sap-icon://inspect" tooltip="View Details"
+                    press=".onViewSupplier" type="Transparent" />
+        </HBox>
+    </cells>
+</ColumnListItem>
+
+                </items>
+            </Table>
         </content>
     </Page>
 </mvc:View>
-
-                            
-
-
-                       
