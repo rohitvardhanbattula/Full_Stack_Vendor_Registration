@@ -8,81 +8,96 @@ sap.ui.define([
     "use strict";
 
     return Controller.extend("vendorportal.controller.SupplierList", {
-        onInit: function () {
-    this._startAutoRefresh();
-},
 
-_startAutoRefresh: function () {
-    if (this._refreshInterval) {
-        clearInterval(this._refreshInterval);
-    }
-    this._fetchSuppliers();
-    this._refreshInterval = setInterval(() => {
-        if (this.getView().getDomRef()) {
-            this._fetchSuppliers();
-        }
-    }, 5000);
-},
-
-onExit: function () {
-    if (this._refreshInterval) {
-        clearInterval(this._refreshInterval);
-        this._refreshInterval = null;
-    }
-},
 
         getURL: function () {
             return sap.ui.require.toUrl("vendorportal");
         },
+onInit: function () {
+        
+        this.getOwnerComponent().getRouter().getRoute("SupplierList").attachMatched(this._onRouteMatched, this);
+        this.getOwnerComponent().getRouter().getRoute("SupplierList").attachPatternMatched(this._onRouteMatched, this);
+        
+       
+        this._refreshInterval = null;
+    },
 
-        _fetchSuppliers: function () {
-    const oView = this.getView();
-    const oTable = oView.byId("supplierTable");
-    const oBinding = oTable ? oTable.getBinding("items") : null;
-    const oModel = oView.getModel() || new JSONModel({ suppliers: [] });
-    if (!oView.getModel()) oView.setModel(oModel);
+    _onRouteMatched: function () {
+        // Fetch suppliers immediately
+        this._fetchSuppliers();
 
-    const aCurrentFilters = oBinding ? oBinding.aFilters : [];
+        // Clear any existing interval
+        if (this._refreshInterval) {
+            clearInterval(this._refreshInterval);
+        }
 
-    fetch(this.getURL() + `/odata/v4/supplier/getsuppliers`)
-        .then(res => res.json())
-        .then(data => {
-            const suppliers = Array.isArray(data.value) ? data.value : data;
-            oModel.setProperty("/suppliers", suppliers);
-
-            if (oBinding) {
-                oBinding.filter(aCurrentFilters);
+        // Start auto-refresh every 5 sec
+        this._refreshInterval = setInterval(() => {
+            this._fetchSuppliers();
+            // Also refresh the approvals if dialog is open
+            if (this._oSupplierDetailsDialog && this._oSupplierDetailsDialog.isOpen()) {
+                const oSupplier = this._oSupplierDetailsDialog.getModel("selectedSupplier").getData();
+                this._fetchApprovals(oSupplier.supplierName);
             }
-        })
-        .catch(err => {
-            MessageBox.error("Error fetching suppliers: " + err.message);
-        });
-},
+        }, 15000);
+    },
 
+    onExit: function () {
+        // Clear interval when leaving the page
+        if (this._refreshInterval) {
+            clearInterval(this._refreshInterval);
+        }
+    },
 
-         onViewSupplier: function (oEvent) {
-            const oSupplier = oEvent.getSource().getBindingContext().getObject();
-            const oView = this.getView();
+    _fetchSuppliers: function () {
+        fetch(this.getURL() + `/odata/v4/supplier/getsuppliers`)
+            .then(res => res.json())
+            .then(data => {
+                const suppliers = Array.isArray(data.value) ? data.value : data;
+                this.getView().setModel(new JSONModel({ suppliers: suppliers }));
+            })
+            .catch(err => {
+                MessageBox.error("Error fetching suppliers: " + err.message);
+            });
+    },
 
-            if (!this._oSupplierDetailsDialog) {
-                Fragment.load({
-                    id: oView.getId(),
-                    name: "vendorportal.view.SupplierDetails",
-                    controller: this
-                }).then(oDialog => {
-                    this._oSupplierDetailsDialog = oDialog;
-                    oView.addDependent(this._oSupplierDetailsDialog);
-                    oDialog.setModel(new JSONModel(oSupplier), "selectedSupplier");
-                    this._loadAttachments(oSupplier.supplierName);
-                    oDialog.open();
-                });
-            } else {
-                this._oSupplierDetailsDialog.setModel(new JSONModel(oSupplier), "selectedSupplier");
+    _fetchApprovals: function (supplierName) {
+        fetch(this.getURL() + `/odata/v4/supplier/Approvals?suppliername=${supplierName}`)
+            .then(res => res.json())
+            .then(data => {
+                const aStatus = data.value || [];
+                const oStatusModel = new JSONModel({ status: aStatus });
+                this.getView().setModel(oStatusModel, "statusModel");
+            })
+            .catch(err => {
+                MessageToast.show("Error fetching approvals: " + err.message);
+            });
+    },
+
+    onViewSupplier: function (oEvent) {
+        const oSupplier = oEvent.getSource().getBindingContext().getObject();
+        const oView = this.getView();
+
+        this._fetchApprovals(oSupplier.supplierName);
+
+        if (!this._oSupplierDetailsDialog) {
+            Fragment.load({
+                id: oView.getId(),
+                name: "vendorportal.view.SupplierDetails",
+                controller: this
+            }).then(oDialog => {
+                this._oSupplierDetailsDialog = oDialog;
+                oView.addDependent(this._oSupplierDetailsDialog);
+                oDialog.setModel(new JSONModel(oSupplier), "selectedSupplier");
                 this._loadAttachments(oSupplier.supplierName);
-                this._oSupplierDetailsDialog.open();
-            }
-        },
-
+                oDialog.open();
+            });
+        } else {
+            this._oSupplierDetailsDialog.setModel(new JSONModel(oSupplier), "selectedSupplier");
+            this._loadAttachments(oSupplier.supplierName);
+            this._oSupplierDetailsDialog.open();
+        }
+    },
         onCloseSupplierDetails: function () {
             if (this._oSupplierDetailsDialog) {
                 this._oSupplierDetailsDialog.close();
@@ -133,47 +148,6 @@ onExit: function () {
                 byteArrays.push(new Uint8Array(byteNumbers));
             }
             return new Blob(byteArrays, { type: contentType });
-        },
-        onViewStatus: function (oEvent) {
-            const oSupplier = oEvent.getSource().getBindingContext().getObject();
-            const oView = this.getView();
-            fetch(this.getURL() + `/odata/v4/supplier/Approvals?suppliername=${oSupplier.supplierName}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error("Failed to fetch supplier status");
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    const aStatus = data.value || [];
-
-                    const oStatusModel = new sap.ui.model.json.JSONModel({ status: aStatus });
-                    oView.setModel(oStatusModel, "statusModel");
-
-                    if (!this._oSupplierStatusDialog) {
-                        sap.ui.core.Fragment.load({
-                            id: oView.getId(),
-                            name: "vendorportal.view.SupplierStatus",
-                            controller: this
-                        }).then(oDialog => {
-                            this._oSupplierStatusDialog = oDialog;
-                            oView.addDependent(this._oSupplierStatusDialog);
-                            this._oSupplierStatusDialog.open();
-                        });
-                    } else {
-                        this._oSupplierStatusDialog.open();
-                    }
-                })
-                .catch(err => {
-                    sap.m.MessageToast.show("Error: " + err.message);
-                });
-        },
-
-
-        onCloseSupplierStatus: function () {
-            if (this._oSupplierStatusDialog) {
-                this._oSupplierStatusDialog.close();
-            }
         },
 
         onNavBack: function () {

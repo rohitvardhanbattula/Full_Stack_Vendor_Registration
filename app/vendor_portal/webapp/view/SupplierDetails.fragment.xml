@@ -1,23 +1,27 @@
 <core:FragmentDefinition xmlns="sap.m" xmlns:f="sap.ui.layout.form" xmlns:core="sap.ui.core">
-    <Dialog id="supplierDetailsDialog" title="Supplier Details" class="sapUiContentPadding" stretchOnPhone="true">
+    
+    <!-- Supplier Details Dialog -->
+    <Dialog id="supplierDetailsDialog" 
+            title="Supplier Details" 
+            class="sapUiContentPadding" 
+            stretchOnPhone="true"
+            draggable="true"
+            resizable="true">
+
+        <!-- Supplier Overview Form -->
         <f:Form editable="false">
             <f:title>
                 <core:Title text="Supplier Overview"/>
             </f:title>
             <f:layout>
                 <f:ResponsiveGridLayout
-                    labelSpanXL="4"
-                    labelSpanL="4"
-                    labelSpanM="4"
-                    labelSpanS="12"
-                    columnsXL="2"
-                    columnsL="2"
-                    columnsM="1"
-                    singleContainerFullSize="false"/>
+                    labelSpanXL="4" labelSpanL="4" labelSpanM="4" labelSpanS="12"
+                    columnsXL="2" columnsL="2" columnsM="1" singleContainerFullSize="false"/>
             </f:layout>
+
             <f:formContainers>
 
-                
+                <!-- Supplier Information -->
                 <f:FormContainer title="Supplier Information">
                     <f:formElements>
                         <f:FormElement label="SAP Business Partner ID">
@@ -50,7 +54,7 @@
                     </f:formElements>
                 </f:FormContainer>
 
-                
+                <!-- Contact Information -->
                 <f:FormContainer title="Contact Information">
                     <f:formElements>
                         <f:FormElement label="First Name">
@@ -68,7 +72,7 @@
                     </f:formElements>
                 </f:FormContainer>
 
-                
+                <!-- Category & Additional Info -->
                 <f:FormContainer title="Category &amp; Additional Info">
                     <f:formElements>
                         <f:FormElement label="Category">
@@ -83,7 +87,7 @@
                     </f:formElements>
                 </f:FormContainer>
 
-                
+                <!-- Attachments -->
                 <f:FormContainer title="Attachments">
                     <f:formElements>
                         <f:FormElement>
@@ -99,7 +103,11 @@
                                             <cells>
                                                 <Text text="{attachmentsModel>fileName}"/>
                                                 <Text text="{attachmentsModel>mimeType}"/>
-                                                <Button text="Download" press="onDownloadAttachment"/>
+                                                <Button text="Download" 
+                                                        icon="sap-icon://download" 
+                                                        type="Emphasized" 
+                                                        press="onDownloadAttachment"
+                                                        tooltip="Download this attachment"/>
                                             </cells>
                                         </ColumnListItem>
                                     </items>
@@ -112,8 +120,36 @@
             </f:formContainers>
         </f:Form>
 
+        <!-- Supplier Approval Status -->
+        <VBox class="sapUiSmallMargin">
+            <Table id="statusTable" inset="false" items="{statusModel>/status}">
+                <columns>
+                    <Column><Text text="Step"/></Column>
+                    <Column><Text text="Approver Name"/></Column>
+                    <Column><Text text="Comments"/></Column>
+                    <Column><Text text="Status"/></Column>
+                </columns>
+                <items>
+                    <ColumnListItem>
+                        <cells>
+                            <Text text="{statusModel>level}" />
+                            <Text text="{statusModel>name}" />
+                            <Text text="{statusModel>comment}" />
+                            <ObjectStatus text="{statusModel>status}"
+                                          state="{= ${statusModel>status} === 'Approved' ? 'Success' : (${statusModel>status} === 'Rejected' ? 'Error' : 'Warning') }"/>
+                        </cells>
+                    </ColumnListItem>
+                </items>
+            </Table>
+        </VBox>
+
         <endButton>
-            <Button text="Close" press="onCloseSupplierDetails"/>
+            <Button text="Close" 
+                    icon="sap-icon://decline" 
+                    type="Reject" 
+                    press="onCloseSupplierDetails"/>
         </endButton>
+
     </Dialog>
+
 </core:FragmentDefinition>
