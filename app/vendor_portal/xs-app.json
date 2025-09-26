@@ -2,6 +2,20 @@
   "welcomeFile": "/index.html",
   "authenticationMethod": "route",
   "routes": [
+     {
+      "source": "^/fetchGSTDetails$",
+      "target": "/fetchGSTDetails",
+      "destination": "srv-api",
+      "csrfProtection": false,
+      "authenticationType": "xsuaa"
+    },
+     {
+      "source": "^/fileextraction$",
+      "target": "/fileextraction",
+      "destination": "srv-api",
+      "csrfProtection": false,
+      "authenticationType": "xsuaa"
+    },
     {
       "source": "^/uploadattachments$",
       "target": "/uploadattachments",

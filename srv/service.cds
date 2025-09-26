@@ -41,6 +41,29 @@ type AdditionalInfoInput {
     details : String(100);
 }
 
+
+type GSTAddressType {
+    pncd  : String;
+}
+
+type GSTPradrType {
+    adr  : String;
+    addr : GSTAddressType;
+}
+
+type GSTDataType {
+    pradr         : GSTPradrType;
+    sts           : String;
+    tradeNam      : String;
+}
+
+type GSTApiResponseType {
+    flag    : Boolean;
+    message : String;
+    data    : GSTDataType;
+}
+
+
 service SupplierService {
 
     function getsuppliers()                                       returns array of SupplierInput;
@@ -64,4 +87,9 @@ service SupplierService {
     comment: String;
     updatedAt: Timestamp;
   };
+
+    
+    function validateGST(gstin: String) returns GSTApiResponseType;
+    
+    
 }

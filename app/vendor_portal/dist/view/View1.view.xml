@@ -14,6 +14,9 @@
                     <Title text="Supplier Management" level="H1"/>
                 </fd:heading>
                 <fd:actions>
+                    <Button text="Download Excel" press="onExcel" type="Emphasized"/>
+                </fd:actions>
+                <fd:actions>
                     <Button text="Show Approvers" press="onOpenApproverList" type="Emphasized"/>
                 </fd:actions>
                 <fd:actions>

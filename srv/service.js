@@ -12,6 +12,83 @@ const app = cds.app;
 app.use(require("express").json());
 app.use(fileUpload());
 
+app.post('/fileextraction', async (req, res) => {
+  const file = req.files?.file; // Assuming single file with form field 'file'
+
+  if (!file) {
+    return res.status(400).json({ error: "No file uploaded" });
+  }
+
+  try {
+    // Convert file buffer to base64
+    const base64Data = file.data.toString('base64');
+    const fileType = file.mimetype;
+    const destination = await getDestination({ destinationName: 'gemini_api' }, { useCache: false });
+    if (!destination || !destination.url) throw new Error("Destination not found or invalid");
+    const url = destination.url.replace(/\/$/, '');
+    // Call Gemini API for GST extraction
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            { text: "Extract the first GST key value pair as {\"GSTIN\":\"<value>\"}" },
+            { inline_data: { mime_type: fileType, data: base64Data } }
+          ]
+        }]
+      })
+    });
+
+    const result = await response.json();
+    const extractedText = result?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+    const gstin = extractedText.match(/\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}Z[A-Z\d]/)?.[0] || "";
+
+    return res.json({ gstin });
+
+  } catch (err) {
+    console.error("Gemini API error:", err);
+    return res.status(500).json({ error: "Error extracting GSTIN" });
+  }
+});
+
+
+app.post('/fetchGSTDetails', async (req, res) => {
+  const { gstin } = req.body;
+
+  if (!gstin) {
+    return res.status(400).json({ error: "GSTIN missing" });
+  }
+
+  try {
+    //const apiKey = "84de71e50cad6f02804c5bfc60c2b6e9";
+    //const url = `destinations/gstcheck_api/check/${apiKey}/${gstin}`;
+
+    const destination = await getDestination({ destinationName: 'gstcheck_api' }, { useCache: false });
+    if (!destination || !destination.url) throw new Error("Destination not found or invalid");
+    const url = destination.url.replace(/\/$/, '');
+    const host = `${url}/${gstin}`;
+    const response = await fetch(host);
+    const result = await response.json();
+
+    if (!result?.flag || !result?.data) {
+      return res.status(404).json({ error: "GST details not found." });
+    }
+
+    // Return GST details only
+    return res.json({
+      gstStatus: result.data.sts,
+      gstTradeName: result.data.tradeNam?.trim() || "",
+      gstPincode: result.data.pradr?.addr?.pncd || ""
+    });
+
+  } catch (e) {
+    console.error("GST fetch error:", e);
+    return res.status(500).json({ error: "Error while fetching GST details." });
+  }
+});
+
+
 app.get('/downloadZip/:supplierName', async (req, res) => {
   const { supplierName } = req.params;
   const files = await SELECT.from('my.supplier.Attachment').where({ supplierName });
@@ -92,14 +169,14 @@ app.post('/uploadattachments', async (req, res) => {
 
 async function triggerNextApprover(supplierName) {
   const vendor = await SELECT.one
-  .from('my.supplier.Supplier')
-  .columns(
-    'supplierName',
-    'primaryContact.email',
-    'primaryContact.phone',
-    'mainAddress.country'
-  )
-  .where({ supplierName });
+    .from('my.supplier.Supplier')
+    .columns(
+      'supplierName',
+      'primaryContact.email',
+      'primaryContact.phone',
+      'mainAddress.country'
+    )
+    .where({ supplierName });
 
 
   const approvals = await SELECT.from('my.supplier.ApproverComment')
@@ -157,8 +234,8 @@ app.post('/bpa-callback', async (req, res) => {
 
       }
       await UPDATE('my.supplier.Supplier')
-      .set({  status:"REJECTED"})
-      .where({ supplierName: suppliername });
+        .set({ status: "REJECTED" })
+        .where({ supplierName: suppliername });
       return res.send({ message: "Approval rejected." });
     }
 
@@ -169,7 +246,7 @@ app.post('/bpa-callback', async (req, res) => {
     if (next) {
       await triggerNextApprover(suppliername);
     } else {
-      const vendor = await SELECT.one.from('my.supplier.Supplier').where({ supplierName:suppliername });
+      const vendor = await SELECT.one.from('my.supplier.Supplier').where({ supplierName: suppliername });
       await createBusinessPartnerInS4(vendor);
       return res.send({ message: "All levels approved." });
     }
@@ -187,83 +264,83 @@ const { aBusinessPartner } = require('./src/generated/A_BUSINESS_PARTNER');
 async function createBusinessPartnerInS4(vendor) {
   const { businessPartnerApi } = aBusinessPartner();
 
-try {
-  const partnerEntity = businessPartnerApi.entityBuilder()
-    .businessPartnerCategory("2")
-    .businessPartnerGrouping("BP02")
-    .firstName(vendor.supplierName)
-    .personFullName(vendor.supplierName)
-    .businessPartnerFullName(vendor.supplierName)
-    .nameCountry("US")
-    .businessPartnerName(vendor.supplierName)
-    .organizationBpName1(vendor.supplierName)
-    .build(); 
+  try {
+    const partnerEntity = businessPartnerApi.entityBuilder()
+      .businessPartnerCategory("2")
+      .businessPartnerGrouping("BP02")
+      .firstName(vendor.supplierName)
+      .personFullName(vendor.supplierName)
+      .businessPartnerFullName(vendor.supplierName)
+      .nameCountry("US")
+      .businessPartnerName(vendor.supplierName)
+      .organizationBpName1(vendor.supplierName)
+      .build();
 
-  console.log("Payload:", partnerEntity);
+    console.log("Payload:", partnerEntity);
 
-  const result = await businessPartnerApi
-    .requestBuilder()
-    .create(partnerEntity)
-    .execute({ destinationName: 'vendordestination' });
+    const result = await businessPartnerApi
+      .requestBuilder()
+      .create(partnerEntity)
+      .execute({ destinationName: 'vendordestination' });
 
-  console.log("Business Partner created:", result);
-  const bpId = result.businessPartner;
-   await UPDATE('my.supplier.Supplier')
-      .set({ businessPartnerId: bpId , status:"APPROVED"})
+    console.log("Business Partner created:", result);
+    const bpId = result.businessPartner;
+    await UPDATE('my.supplier.Supplier')
+      .set({ businessPartnerId: bpId, status: "APPROVED" })
       .where({ supplierName: vendor.supplierName });
-  return result;
-} catch (error) {
-  console.error("Error creating Business Partner:", error.rootCause?.response?.data?.error?.message?.value || error.message);
-  throw error;
-}
+    return result;
+  } catch (error) {
+    console.error("Error creating Business Partner:", error.rootCause?.response?.data?.error?.message?.value || error.message);
+    throw error;
+  }
 
 }
 async function getAppHostURLFromDestination() {
-  
-  
-    const destination = await getDestination({ destinationName: 'vendorportaldest' }, { useCache: true });
-    console.log("destination fetched", destination)
-    if (!destination || !destination.url) throw new Error("Destination not found or invalid");
-    return destination.url.replace(/\/$/, '');
+
+
+  const destination = await getDestination({ destinationName: 'vendorportaldest' }, { useCache: true });
+  console.log("destination fetched", destination)
+  if (!destination || !destination.url) throw new Error("Destination not found or invalid");
+  return destination.url.replace(/\/$/, '');
 }
 
 async function startBPAWorkflow({ name, email, country, phone, status, approver_name, approver_email, approver_level, prior_comments }) {
   const files = await SELECT.from('my.supplier.Attachment').columns('ID', 'fileName').where({ supplierName: name });
   var host = '';
   //host = `https://the-hackett-group-d-b-a-answerthink--inc--at-development1a73fa6.cfapps.us10.hana.ondemand.com`;
-  host= await getAppHostURLFromDestination();
+  host = await getAppHostURLFromDestination();
   const fileLinks = files.map(file => `${host}/downloadFile/${file.ID}`);
   const fileZipLink = `${host}/downloadZip/${name}`;
 
   const [attachment1, attachment2] = [fileLinks[0] || "", fileLinks[1] || ""];
 
   return await executeHttpRequest(
-  { destinationName: 'spa_process_destination' },
-  {
-    method: 'POST',
-    url: "/",
-    headers: { 
-      'Content-Type': 'application/json'
-    },
-    data: {
-      definitionId: "us10.at-development-hgv7q18y.vendorportalbuildautomation.vendorportalprocess",
-      context: {
-        _name: name,
-        email,
-        country,
-        phone,
-        status,
-        attachment1,
-        attachment2,
-        attachments: fileZipLink,
-        approver_name,
-        approver_level,
-        approver_email,
-        prior_comments
+    { destinationName: 'spa_process_destination' },
+    {
+      method: 'POST',
+      url: "/",
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      data: {
+        definitionId: "us10.at-development-hgv7q18y.vendorportalbuildautomation.vendorportalprocess",
+        context: {
+          _name: name,
+          email,
+          country,
+          phone,
+          status,
+          attachment1,
+          attachment2,
+          attachments: fileZipLink,
+          approver_name,
+          approver_level,
+          approver_email,
+          prior_comments
+        }
       }
     }
-  }
-);
+  );
 
 }
 
@@ -306,8 +383,8 @@ module.exports = cds.service.impl(function () {
       await INSERT.into('my.supplier.Supplier').entries({
         ID: supplierId,
         supplierName: supplierData.supplierName,
-        status:"PENDING",
-        businessPartnerId   : "-",
+        status: "PENDING",
+        businessPartnerId: "-",
         mainAddress_ID: addressId,
         primaryContact_ID: contactId,
         categoryAndRegion_ID: catRegId,
@@ -347,24 +424,27 @@ module.exports = cds.service.impl(function () {
 
 
   this.on("resetAllData", async () => {
-  try {
-    
-    await DELETE.from("my.supplier.Attachment");
-    await DELETE.from("my.supplier.ApproverComment");
-    await DELETE.from("my.supplier.Approver");
-    await DELETE.from("my.supplier.Supplier");
-    await DELETE.from("my.supplier.Address");
-    await DELETE.from("my.supplier.Contact");
-    await DELETE.from("my.supplier.CategoryRegion");
-    await DELETE.from("my.supplier.AdditionalInfo");
+    try {
 
-    return "All data deleted successfully!";
-  } catch (e) {
-    return `Error deleting data: ${e.message}`;
-  }
-});
+      const destination = await getDestination({ destinationName: 'gstcheck_api' }, { useCache: false });
+      console.log("destination fetched", destination)
+      if (!destination || !destination.url) throw new Error("Destination not found or invalid");
+      console.log(destination.url.replace(/\/$/, ''));
+      await DELETE.from("my.supplier.Attachment");
+      await DELETE.from("my.supplier.ApproverComment");
+      await DELETE.from("my.supplier.Supplier");
+      await DELETE.from("my.supplier.Address");
+      await DELETE.from("my.supplier.Contact");
+      await DELETE.from("my.supplier.CategoryRegion");
+      await DELETE.from("my.supplier.AdditionalInfo");
 
-  
+      return "All data deleted successfully!";
+    } catch (e) {
+      return `Error deleting data: ${e.message}`;
+    }
+  });
+
+
   this.on("approverentry", async (req) => {
     try {
       const { approverentry } = req.data;
@@ -386,28 +466,28 @@ module.exports = cds.service.impl(function () {
   });
 
   this.on("approverupdateentry", async (req) => {
-  try {
-    const { approverentry } = req.data;
-    const { level, country } = approverentry;
+    try {
+      const { approverentry } = req.data;
+      const { level, country } = approverentry;
 
-    // check if record exists
-    const exists = await SELECT.one.from("my.supplier.Approver")
-      .where({ level: level, country: country });
+      // check if record exists
+      const exists = await SELECT.one.from("my.supplier.Approver")
+        .where({ level: level, country: country });
 
-    if (!exists) {
-      return req.error(404, `No approver found for Level ${level} and Country ${country}`);
+      if (!exists) {
+        return req.error(404, `No approver found for Level ${level} and Country ${country}`);
+      }
+
+
+      await UPDATE("my.supplier.Approver")
+        .set(approverentry)
+        .where({ level: level, country: country });
+
+      return `Approver entry updated successfully for Level ${level}, Country ${country}`;
+    } catch (e) {
+      return req.error(500, "Error updating approver entry: " + e.message);
     }
-
-    
-    await UPDATE("my.supplier.Approver")
-      .set(approverentry)
-      .where({ level: level, country: country });
-
-    return `Approver entry updated successfully for Level ${level}, Country ${country}`;
-  } catch (e) {
-    return req.error(500, "Error updating approver entry: " + e.message);
-  }
-});
+  });
 
 
   this.on('Approvals', async (req) => {

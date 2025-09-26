@@ -3,10 +3,158 @@ sap.ui.define([
     "sap/m/MessageToast",
     "sap/ui/model/json/JSONModel",
     "sap/m/MessageBox",
-    "sap/ui/core/Fragment"
-], function (Controller, MessageToast, JSONModel, MessageBox, Fragment) {
+    "sap/ui/core/Fragment",
+    "sap/ui/export/Spreadsheet"
+], function (Controller, MessageToast, JSONModel, MessageBox, Fragment, Spreadsheet) {
     "use strict";
     return Controller.extend("vendorportal.controller.View1", {
+        _validateGST: async function (gstin, supplierData) {
+            if (!gstin) {
+                await new Promise((resolve) => {
+                    sap.m.MessageBox.warning("Please upload GST Number related PDF", {
+                        onClose: () => resolve()
+                    });
+                });
+                return false;
+            }
+
+            try {
+                const response = await fetch(this.getURL() + '/fetchGSTDetails', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ gstin })
+                });
+
+                const gstData = await response.json();
+
+                if (!response.ok) {
+                    await new Promise((resolve) => {
+                        sap.m.MessageBox.error(gstData.error || "Error fetching GST details", {
+                            onClose: () => resolve()
+                        });
+                    });
+                    return false;
+                }
+
+                const errors = [];
+
+                if (gstData.gstStatus !== "Active") {
+                    errors.push("GST Number is not active.");
+                }
+
+                const clean = str => str?.toLowerCase().replace(/\s+/g, " ").trim();
+
+                if (clean(gstData.gstTradeName) !== clean(supplierData.supplierName)) {
+                    errors.push(`Trade Name (${gstData.gstTradeName}) does not match your Supplier Name (${supplierData.supplierName})`);
+                }
+                if (gstData.gstPincode !== supplierData.mainAddress.postalCode) {
+                    errors.push(`Pincode (${gstData.gstPincode}) does not match your Postal Code (${supplierData.mainAddress.postalCode})`);
+                }
+
+                if (errors.length > 0) {
+                    await new Promise((resolve) => {
+                        sap.m.MessageBox.error(
+                            "GST details do not match:\n" + errors.join("\n"),
+                            { onClose: () => resolve() }
+                        );
+                    });
+                    return false;
+                }
+
+                // All good
+                return true;
+
+            } catch (err) {
+                console.error("Validation error:", err);
+                await new Promise((resolve) => {
+                    sap.m.MessageBox.error("Error while validating GST Number.", {
+                        onClose: () => resolve()
+                    });
+                });
+            }
+        }
+
+        ,
+        _extractGSTFromFile: async function (file) {
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const response = await fetch(this.getURL() + '/fileextraction', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to extract GST');
+                }
+
+                const data = await response.json();
+                return data.gstin || "";
+            } catch (err) {
+                console.error("Backend GST extraction error:", err);
+                return "";
+            }
+        },
+        _readFileAsBase64: function (file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const base64 = btoa(new Uint8Array(e.target.result).reduce((data, byte) => data + String.fromCharCode(byte), ""));
+                    resolve(base64);
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        },
+        onExcel: function () {
+            var sSuppliersUrl = this.getURL() + `/odata/v4/supplier/getsuppliers`;
+            var sApproversUrl = this.getURL() + `/odata/v4/supplier/Approvers`;
+
+            Promise.all([
+                fetch(sSuppliersUrl).then(res => res.json()),
+                fetch(sApproversUrl).then(res => res.json())
+            ]).then(function ([oSuppliersRes, oApproversRes]) {
+                var aSuppliersData = oSuppliersRes.value || [];
+                var aApproversData = oApproversRes.value || [];
+                var aSuppliersExcelData = aSuppliersData.map(item => ({
+                    SupplierName: item.supplierName,
+                    City: item.mainAddress.city,
+                    Country: item.mainAddress.country
+                }));
+
+                var aApproversExcelData = aApproversData.map(item => ({
+                    Level: item.level,
+                    Name: item.name,
+                    Email: item.email
+                }));
+
+                if (!Array.isArray(aSuppliersExcelData) || !Array.isArray(aApproversExcelData)) {
+                    MessageBox.error("Export failed: invalid data format.");
+                    return;
+                }
+                if (aSuppliersExcelData.length === 0 && aApproversExcelData.length === 0) {
+                    MessageBox.warning("No data available to export.");
+                    return;
+                }
+
+
+                var wb = XLSX.utils.book_new();
+                var wsSuppliersData = XLSX.utils.json_to_sheet(aSuppliersExcelData);
+                var wsApproversData = XLSX.utils.json_to_sheet(aApproversExcelData);
+                XLSX.utils.book_append_sheet(wb, wsSuppliersData, "Suppliers");
+                XLSX.utils.book_append_sheet(wb, wsApproversData, "Approvers");
+                XLSX.writeFile(wb, "Suppliers_and_Approvers.xlsx");
+
+                MessageToast.show("Excel downloaded successfully!");
+
+            }).catch(function (err) {
+                MessageBox.error("Failed to fetch data: " + err.message);
+            });
+
+        }
+        ,
+
         getURL: function () {
             return sap.ui.require.toUrl("vendorportal");
         },
@@ -55,6 +203,10 @@ sap.ui.define([
         },
         onNextStep4: function () {
             const aUploaded = this.getView().getModel().getProperty("/uploadedFiles") || [];
+            if (aUploaded.length === 0) {
+                MessageBox.warning("Please upload at least 1 file to proceed.");
+                return;
+            }
             if (aUploaded.length > 2) {
                 sap.m.MessageBox.warning("You have uploaded more than 2 files. Please remove extra files before proceeding.");
                 return;
@@ -65,6 +217,17 @@ sap.ui.define([
         ,
 
         onInit: function () {
+            const oView = this.getView();
+            if (!this._oProgressDialog) {
+                Fragment.load({
+                    id: oView.getId(),
+                    name: "vendorportal.view.ProgressDialog",
+                    controller: this
+                }).then(dialog => {
+                    this._oProgressDialog = dialog;
+                    oView.addDependent(dialog);
+                });
+            }
             const oModel = new JSONModel({
                 supplierData: {
                     supplierName: "",
@@ -92,6 +255,9 @@ sap.ui.define([
             });
         }
         ,
+        onCloseProgressDialog: function () {
+            if (this._oProgressDialog) this._oProgressDialog.close();
+        },
 
         onFileChange: function (oEvent) {
             this._newFiles = Array.from(oEvent.getParameter("files") || []);
@@ -139,10 +305,9 @@ sap.ui.define([
             let aFiles = oModel.getProperty("/uploadedFiles") || [];
             aFiles = aFiles.filter(f => f.documentId !== sDocId);
             oModel.setProperty("/uploadedFiles", aFiles);
+            this.byId("btnCreateSupplier").setEnabled(aFiles.length > 0);
         },
 
-
-        // Reset form and clear files & model
         _resetForm: function () {
             this.getView().getModel().setProperty("/supplierData", {
                 supplierName: "",
@@ -157,61 +322,84 @@ sap.ui.define([
             if (oFileUploader) oFileUploader.clear();
 
         },
-        onSaveSupplier: function () {
+        onSaveSupplier: async function () {
             const oData = this.getView().getModel().getProperty("/supplierData");
+            const aUploadedFiles = this.getView().getModel().getProperty("/uploadedFiles") || [];
 
-            const aUploaded1 = this.getView().getModel().getProperty("/uploadedFiles") || [];
-            console.log(aUploaded1, "A1");
-            this._files = aUploaded1.map(f => f.file);
-            console.log(this._files, "A2");
-
-            if (this._files.length > 2) {
+            if (aUploadedFiles.length > 2) {
                 MessageBox.warning("Please add at max 2 files before saving.");
                 return;
             }
+
+
+            if (this._oProgressDialog) {
+                this._oProgressDialog.open();
+                this.byId("gstIcon").setSrc("sap-icon://synchronize").setColor("Neutral");
+                this.byId("supplierIcon").setSrc("sap-icon://circle-task").setColor("Neutral");
+            }
+
             sap.ui.core.BusyIndicator.show(0);
-            fetch(this.getURL() + `/odata/v4/supplier/createSupplierWithFiles`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ supplierData: oData })
-            })
-                .then(res => res.json())
-                .then(result => {
-                    MessageBox.show(result.value);
 
-                    if (this._files && this._files.length > 0) {
-                        const formData = new FormData();
-                        formData.append("supplierName", oData.supplierName);
+            try {
 
-                        Array.from(this._files).forEach(file => {
-                            formData.append("files", file);
-                        });
-
-                        return fetch(this.getURL() + `/uploadattachments`, {
-                            method: "POST",
-                            body: formData
-                        });
+                let validGSTFound = false;
+                for (const fileObj of aUploadedFiles) {
+                    const gstin = await this._extractGSTFromFile(fileObj.file);
+                    if (gstin) {
+                        const isValid = await this._validateGST(gstin, oData);
+                        if (isValid) {
+                            validGSTFound = true;
+                            this.byId("gstIcon").setSrc("sap-icon://accept").setColor("Positive");
+                            break;
+                        }
                     }
-                })
-                .then(res => res ? res.json() : null)
-                .then(r => {
-                    console.log(r.value);
-                    // ✅ Reset wizard after upload
-                    this._resetForm();
-                    const oWizard = this.byId("createWizard");
-                    if (oWizard) {
-                        const oFirstStep = this.byId("step1");
-                        oWizard.discardProgress(oFirstStep);
-                    }
-                })
-                .catch(err => {
-                    MessageBox.error("Error saving supplier: " + err.message);
-                })
-                .finally(() => {
-                    sap.ui.core.BusyIndicator.hide();
+                }
+
+                if (!validGSTFound) {
+                    this.byId("gstIcon").setSrc("sap-icon://decline").setColor("Negative");
+                    return;
+                }
+
+
+                const res = await fetch(this.getURL() + `/odata/v4/supplier/createSupplierWithFiles`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ supplierData: oData })
                 });
+                const result = await res.json();
+                this.byId("supplierIcon").setSrc("sap-icon://accept").setColor("Positive");
+
+
+                if (aUploadedFiles.length > 0) {
+                    const formData = new FormData();
+                    formData.append("supplierName", oData.supplierName);
+                    aUploadedFiles.forEach(f => formData.append("files", f.file));
+
+                    await fetch(this.getURL() + `/uploadattachments`, { method: "POST", body: formData });
+                }
+
+                sap.m.MessageBox.success("Supplier created successfully with all validations & attachments!", {
+                    onClose: () => {
+                        // Reset wizard + form after confirmation
+                        this._resetForm();
+                        const oWizard = this.byId("createWizard");
+                        if (oWizard) oWizard.discardProgress(this.byId("step1"));
+                    }
+                });
+
+
+            } catch (err) {
+                console.error(err);
+                this.byId("supplierIcon").setSrc("sap-icon://decline").setColor("Negative");
+            } finally {
+                sap.ui.core.BusyIndicator.hide();
+                if (this._oProgressDialog) {
+                    this._oProgressDialog.close();
+                }
+            }
         }
         ,
+
 
         onOpenSupplierList: function () {
             this.getOwnerComponent().getRouter().navTo("SupplierList");
@@ -331,7 +519,7 @@ sap.ui.define([
                 this.byId("inputEmail1").setValue("");
                 if (response.ok) {
                     MessageToast.show(result.value);
-                    this.byId("updateApproverDialog").close(); // ✅ consistent
+                    this.byId("updateApproverDialog").close();
                 } else {
                     MessageBox.error(result.error?.message || "Failed to update approver");
                 }
