@@ -1,18 +1,43 @@
-<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
-    <Dialog id="progressDialog" title="Processing Supplier" stretchOnPhone="true">
-        <VBox class="sapUiSmallMargin">
-            <HBox class="sapUiSmallMargin">
-    <core:Icon id="gstIcon" src="sap-icon://synchronize" size="1.5rem" color="Neutral"/>
-    <Text text="GST Validation" class="sapUiSmallMarginBegin"/>
-</HBox>
-<HBox class="sapUiSmallMargin">
-    <core:Icon id="supplierIcon" src="sap-icon://circle-task" size="1.5rem" color="Neutral"/>
-    <Text text="Supplier Creation" class="sapUiSmallMarginBegin"/>
-</HBox>
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:l="sap.ui.layout"
+    xmlns:core="sap.ui.core">
+    <Dialog
+        id="progressDialog"
+        title="Processing Submission"
+        contentWidth="25rem"
+        draggable="true">
+        
+        <content>
+            <l:VerticalLayout class="sapUiContentPadding" width="100%">
+                
+                <FlexBox alignItems="Center" justifyContent="SpaceBetween" class="sapUiTinyMarginBottom">
+                    <HBox alignItems="Center">
+                        <core:Icon src="sap-icon://bar-code" class="sapUiSmallMarginEnd" />
+                        <Text id="gstText" text="GST Validation" />
+                    </HBox>
+                    <HBox alignItems="Center" class="sapUiSmallMarginBegin">
+                        <BusyIndicator id="gstBusyIndicator" size="1.2rem" class="sapUiTinyMarginEnd"/>
+                        <core:Icon id="gstStatusIcon" size="1.2rem" visible="false" />
+                    </HBox>
+                </FlexBox>
 
-        </VBox>
+                <FlexBox alignItems="Center" justifyContent="SpaceBetween">
+                    <HBox alignItems="Center">
+                        <core:Icon src="sap-icon://supplier" class="sapUiSmallMarginEnd" />
+                        <Text id="supplierText" text="Supplier Creation" />
+                    </HBox>
+                     <HBox alignItems="Center" class="sapUiSmallMarginBegin">
+                        <BusyIndicator id="supplierBusyIndicator" size="1.2rem" class="sapUiTinyMarginEnd"/>
+                        <core:Icon id="supplierStatusIcon" size="1.2rem" visible="false" />
+                    </HBox>
+                </FlexBox>
+
+            </l:VerticalLayout>
+        </content>
+        
         <buttons>
-            <Button text="Close" press=".onCloseProgressDialog"/>
+            <Button id="progressDialogCloseButton" text="Close" press=".onCloseProgressDialog" enabled="false"/>
         </buttons>
     </Dialog>
 </core:FragmentDefinition>

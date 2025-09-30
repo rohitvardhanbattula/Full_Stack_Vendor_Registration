@@ -127,7 +127,7 @@
             </items>
         </Table>
 
-        <Text text="You can upload up to 2 files. Supported formats: PDF, DOCX, XLSX" class="sapUiSmallMarginTop"/>
+        <Text text="You can upload up to 2 files. Supported formats: PDF, DOCX, XLSX, PNG/JPEG" class="sapUiSmallMarginTop"/>
         <Button text="Next" type="Emphasized" press="onNextStep4" class="sapUiSmallMarginTop"/>
     </VBox>
                         

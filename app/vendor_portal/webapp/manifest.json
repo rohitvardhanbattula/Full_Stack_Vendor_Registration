@@ -114,7 +114,12 @@
       "pattern": "suppliers",
       "name": "SupplierList",
       "target": "SupplierList"
-    }
+    },
+    {
+            "pattern": "suppliers/{supplierId}",
+            "name": "SupplierDetail",
+            "target": "SupplierDetail"
+        }
   ],
   "targets": {
     "View1": {
@@ -122,7 +127,11 @@
     },
     "SupplierList": {
       "viewName": "SupplierList"
-    }
+    },
+     "SupplierDetail": {
+            "viewName": "SupplierDetail",
+            "viewType": "XML"
+        }
   }
     },
     "rootView": {

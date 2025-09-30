@@ -9,6 +9,9 @@ type SupplierInput {
     supplierName      : String(200);
     status: String(100);
     businessPartnerId   : String;
+    aiExtractedText : LargeString;
+    gstValidationStatus : String;
+    gstValidationRemarks : String;
     mainAddress       : AddressInput;
     primaryContact    : ContactInput;
     categoryAndRegion : CategoryRegionInput;
@@ -77,6 +80,8 @@ service SupplierService {
         fileName : String;
         mimeType : String;
         content  : LargeBinary;
+        filesize: String(100);
+    uploadedAt   : Timestamp;
     };
     function resetAllData() returns String;
     function Approvals(suppliername : String)                          returns array of {
@@ -90,6 +95,11 @@ service SupplierService {
 
     
     function validateGST(gstin: String) returns GSTApiResponseType;
-    
+    action saveValidationResult(
+        supplierName      : String,
+        extractedGstin    : String,
+        validationStatus  : String,
+        validationRemarks : String
+    ) ;
     
 }

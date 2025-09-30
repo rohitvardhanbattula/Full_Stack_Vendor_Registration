@@ -132,6 +132,7 @@ app.post('/uploadattachments', async (req, res) => {
         supplierName,
         fileName: uploadedFile.name,
         mimeType: uploadedFile.mimetype,
+        filesize: Math.round(uploadedFile.size / 1024),
         content: base64Content,
         uploadedAt: new Date()
       });
@@ -383,6 +384,9 @@ module.exports = cds.service.impl(function () {
       await INSERT.into('my.supplier.Supplier').entries({
         ID: supplierId,
         supplierName: supplierData.supplierName,
+        aiExtractedText : "-",
+    gstValidationStatus : "Failed",
+    gstValidationRemarks : "-",
         status: "PENDING",
         businessPartnerId: "-",
         mainAddress_ID: addressId,
@@ -500,12 +504,46 @@ module.exports = cds.service.impl(function () {
     return approvals;
   });
 
+   this.on('saveValidationResult', async (req) => {
+        // Destructure the parameters from the request payload
+        const { supplierName, extractedGstin, validationStatus, validationRemarks } = req.data;
+
+        // Ensure a supplier name was provided
+        if (!supplierName) {
+            return req.error(400, 'Supplier Name is required to save validation results.');
+        }
+
+        try {
+            // Perform an UPDATE on the Suppliers entity
+            const result = await UPDATE('my.supplier.Supplier')
+                .set({
+                    aiExtractedText: extractedGstin,
+                    gstValidationStatus: validationStatus,
+                    gstValidationRemarks: validationRemarks
+                })
+                .where({ supplierName: supplierName });
+
+            // Check if any row was actually updated
+            if (result === 0) {
+                return req.error(404, `Supplier '${supplierName}' not found.`);
+            }
+
+            console.log(`Successfully updated validation results for supplier: ${supplierName}`);
+            
+            // Return a success message
+            return `Validation results for ${supplierName} have been saved.`;
+
+        } catch (error) {
+            console.error('Error saving validation result:', error);
+            return req.error(500, 'An internal error occurred while saving the validation results.');
+        }
+    });
   this.on("downloadAttachments", async (req) => {
     const { supplierName } = req.data;
     if (!supplierName) return req.error(400, "Missing supplierName");
 
     const files = await SELECT.from('my.supplier.Attachment')
-      .columns("fileName", "mimeType", "content")
+      .columns("fileName", "mimeType", "content","filesize","uploadedAt")
       .where({ supplierName });
 
     if (!files || files.length === 0) {
@@ -515,7 +553,9 @@ module.exports = cds.service.impl(function () {
     return files.map((file) => ({
       fileName: file.fileName,
       mimeType: file.mimeType,
-      content: file.content?.toString("base64")
+      content: file.content?.toString("base64"),
+      filesize:file.filesize,
+      uploadedAt:file.uploadedAt
     }));
   });
 });

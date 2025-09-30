@@ -4,7 +4,6 @@
 
     <Page id="supplierPage" title="Suppliers" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
 
-        <!-- FILTER BAR -->
         <headerContent>
             <Toolbar >
                 <Label text="Name" labelFor="filterName" />
@@ -28,11 +27,8 @@
             </Toolbar>
         </headerContent>
 
-        <!-- SUPPLIER TABLE -->
         <content>
-            <Table id="supplierTable" items="{
-    path: '/suppliers'
-}">
+            <Table id="supplierTable" items="{path: '/suppliers'}" itemPress=".onSupplierPress" alternateRowColors="true">
                 <columns>
                     <Column hAlign="Center" minScreenWidth="Tablet" demandPopin="true">
                         <Text text="Name" />
@@ -46,12 +42,8 @@
                     <Column hAlign="Center" minScreenWidth="Tablet" demandPopin="true">
                         <Text text="Status" />
                     </Column>
-                    <Column hAlign="Center">
-                        <Text text="Details" />
-                    </Column>
-                </columns>
+                    </columns>
 
-                <!-- Template for rows -->
                 <items>
                     <ColumnListItem type="Active">
                         <cells>
@@ -67,14 +59,10 @@
                             <HBox fitContainer="true" justifyContent="Center">
                                 <Button text="{status}" type="{ path: 'status', formatter: '.formatStatusType' }"/>
                             </HBox>
-                            <HBox fitContainer="true" justifyContent="Center">
-                                <Button icon="sap-icon://inspect" tooltip="View Details" press=".onViewSupplier" type="Transparent" />
-                            </HBox>
-                        </cells>
+                            </cells>
                     </ColumnListItem>
                 </items>
             </Table>
-
         </content>
     </Page>
 </mvc:View>

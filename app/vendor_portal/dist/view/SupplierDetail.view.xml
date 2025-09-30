@@ -1,0 +1,131 @@
+<mvc:View
+    controllerName="vendorportal.controller.SupplierDetail"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:f="sap.ui.layout.form"
+    xmlns:l="sap.ui.layout"
+    xmlns:core="sap.ui.core">
+
+    <Page
+        id="supplierDetailPage"
+        title="Supplier Details"
+        showNavButton="true"
+        navButtonPress=".onNavBack"
+        class="sapUiResponsiveContentPadding"> <content>
+            <Panel expandable="true" expanded="true" width="auto" class="sapUiSmallMarginBottom">
+                <headerToolbar>
+                    <Toolbar>
+                        <Title text="Supplier &amp; Address Information" />
+                    </Toolbar>
+                </headerToolbar>
+                <content>
+                    <f:Form editable="false">
+                        <f:layout>
+                            <f:ResponsiveGridLayout
+                                labelSpanXL="4" labelSpanL="4" labelSpanM="12" labelSpanS="12"
+                                columnsXL="2" columnsL="2" columnsM="1"/>
+                        </f:layout>
+                        <f:formContainers>
+                            <f:FormContainer>
+                                <f:formElements>
+                                    <f:FormElement label="SAP Business Partner ID"><f:fields><Text text="{businessPartnerId}"/></f:fields></f:FormElement>
+                                    <f:FormElement label="Supplier Name"><f:fields><Text text="{supplierName}"/></f:fields></f:FormElement>
+                                    <f:FormElement label="First Name"><f:fields><Text text="{primaryContact/firstName}"/></f:fields></f:FormElement>
+                                    <f:FormElement label="Last Name"><f:fields><Text text="{primaryContact/lastName}"/></f:fields></f:FormElement>
+                                    <f:FormElement label="Email"><f:fields><Text text="{primaryContact/email}"/></f:fields></f:FormElement>
+                                    <f:FormElement label="Phone"><f:fields><Text text="{primaryContact/phone}"/></f:fields></f:FormElement>
+                                </f:formElements>
+                            </f:FormContainer>
+                            <f:FormContainer>
+                                <f:formElements>
+                                    <f:FormElement label="Street"><f:fields><Text text="{mainAddress/street}"/></f:fields></f:FormElement>
+                                    <f:FormElement label="City"><f:fields><Text text="{mainAddress/city}"/></f:fields></f:FormElement>
+                                    <f:FormElement label="Postal Code"><f:fields><Text text="{mainAddress/postalCode}"/></f:fields></f:FormElement>
+                                    <f:FormElement label="Country"><f:fields><Text text="{mainAddress/country}"/></f:fields></f:FormElement>
+                                    <f:FormElement label="Region"><f:fields><Text text="{mainAddress/region}"/></f:fields></f:FormElement>
+                                </f:formElements>
+                            </f:FormContainer>
+                        </f:formContainers>
+                    </f:Form>
+                </content>
+            </Panel>
+
+            <Panel expandable="true" expanded="true" width="auto" class="sapUiSmallMarginBottom">
+                 <headerToolbar>
+                    <Toolbar>
+                        <Title text="AI &amp; Validation Checks" />
+                    </Toolbar>
+                </headerToolbar>
+                <content>
+                    <l:Grid defaultSpan="XL6 L6 M12 S12" >
+                        <VBox>
+                            <Title text="Extracted text through AI" level="H3" class="sapUiSmallMarginBottom"/>
+                            <Text text="{aiExtractedText}" />
+                        </VBox>
+                        <VBox>
+                            <Title text="GST Validation" level="H3" class="sapUiSmallMarginBottom"/>
+                            <Table inset="false" showNoData="false">
+                                <columns>
+                                    <Column width="6rem"><Text text="Status"/></Column>
+                                    <Column><Text text="Remarks"/></Column>
+                                </columns>
+                                <items>
+                                    <ColumnListItem>
+                                        <cells>
+                                            <core:Icon src="{= ${gstValidationStatus} === 'Success' ? 'sap-icon://accept' : 'sap-icon://decline' }" color="{= ${gstValidationStatus} === 'Success' ? 'Positive' : 'Negative' }" size="1.5rem" class="sapUiSmallMargin"/>
+                                            <Text text="{gstValidationRemarks}" />
+                                        </cells>
+                                    </ColumnListItem>
+                                </items>
+                            </Table>
+                        </VBox>
+                    </l:Grid>
+                </content>
+            </Panel>
+
+            <Panel expandable="true" expanded="true" width="auto" class="sapUiSmallMarginBottom">
+                 <headerToolbar>
+                    <Toolbar>
+                        <Title text="Attachments" />
+                    </Toolbar>
+                </headerToolbar>
+                <content>
+                    <Table id="attachmentsTable" items="{attachmentsModel>/attachments}">
+                        <columns>
+                            <Column><Text text="File Name"/></Column>
+                            <Column><Text text="File Type"/></Column>
+                            <Column><Text text="File Size(KB)"/></Column>
+                            <Column><Text text="Uploaded At"/></Column>
+                            <Column><Text text="Actions"/></Column>
+                        </columns>
+                        <items>
+                            <ColumnListItem><cells><Text text="{attachmentsModel>fileName}"/><Text text="{ path: 'attachmentsModel>mimeType', formatter: '.formatMimeType'}"/><Text text="{attachmentsModel>filesize}"/><Text text="{attachmentsModel>uploadedAt}"/><Button text="Download" icon="sap-icon://download" type="Emphasized" press="onDownloadAttachment"/></cells></ColumnListItem>
+                        </items>
+                    </Table>
+                </content>
+            </Panel>
+            
+            <Panel expandable="true" expanded="true" width="auto" class="sapUiSmallMarginBottom">
+                <headerToolbar>
+                    <Toolbar>
+                        <Title text="Approval Status" />
+                    </Toolbar>
+                </headerToolbar>
+                <content>
+                    <Table id="statusTable" items="{statusModel>/status}">
+                        <columns>
+                            <Column><Text text="Step"/></Column>
+                            <Column><Text text="Approver Name"/></Column>
+                            <Column><Text text="Comments"/></Column>
+                            <Column><Text text="Status"/></Column>
+                        </columns>
+                        <items>
+                            <ColumnListItem><cells><Text text="{statusModel>level}" /><Text text="{statusModel>name}" /><Text text="{statusModel>comment}" /><ObjectStatus text="{statusModel>status}" state="{= ${statusModel>status} === 'Approved' ? 'Success' : (${statusModel>status} === 'Rejected' ? 'Error' : 'Warning') }"/></cells></ColumnListItem>
+                        </items>
+                    </Table>
+                </content>
+            </Panel>
+
+        </content>
+    </Page>
+</mvc:View>

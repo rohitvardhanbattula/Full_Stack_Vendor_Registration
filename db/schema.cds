@@ -5,6 +5,9 @@ using { cuid } from '@sap/cds/common';
 entity Supplier : cuid {
     key supplierName      : String(200) @cds.persistence.unique;
         status             : String(100);
+        aiExtractedText : LargeString;
+    gstValidationStatus : String;
+    gstValidationRemarks : String;
         businessPartnerId   : String;
         mainAddress       : Association to Address;
         primaryContact    : Association to Contact;
@@ -42,9 +45,11 @@ entity AdditionalInfo : cuid {
 
 entity Attachment : cuid {
     supplier     : Association to Supplier;
+    
     supplierName : String;
      fileName : String(255);
     mimeType     : String(100);
+    filesize: String(100);
     content      : LargeString;
     uploadedAt   : Timestamp;
 }
