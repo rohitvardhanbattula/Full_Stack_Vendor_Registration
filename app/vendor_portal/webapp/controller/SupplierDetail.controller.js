@@ -38,7 +38,7 @@ sap.ui.define([
         onInit: function () {
             this.getView().setModel(new JSONModel({ attachments: [] }), "attachmentsModel");
             this.getView().setModel(new JSONModel({ status: [] }), "statusModel");
-
+            this.getView().setModel(new JSONModel({ gstChecks: [] }), "gstValidationModel");
             const oRouter = this.getOwnerComponent().getRouter();
             oRouter.getRoute("SupplierDetail").attachPatternMatched(this._onObjectMatched, this);
         },
@@ -75,17 +75,35 @@ sap.ui.define([
             oView.setModel(new JSONModel({}));
             oView.getModel("attachmentsModel").setProperty("/attachments", []);
             oView.getModel("statusModel").setProperty("/status", []);
+             oView.getModel("gstValidationModel").setProperty("/gstChecks", []);
             oView.setBusy(true);
 
             const pSupplierDetails = this._fetchSupplierDetails(sSupplierName);
             const pApprovals = this._fetchApprovals(sSupplierName);
             const pAttachments = this._fetchAttachments(sSupplierName);
-
-            Promise.all([pSupplierDetails, pApprovals, pAttachments]).finally(() => {
+               const pGstDetails = this._fetchGstDetails(sSupplierName);
+            Promise.all([pSupplierDetails, pApprovals, pAttachments, pGstDetails]).finally(() => {
                 oView.setBusy(false);
             });
         },
-
+        _fetchGstDetails: function (sSupplierName) {
+            const sUrl = this.getURL() + `/odata/v4/supplier/gst?$filter=supplierName eq '${encodeURIComponent(sSupplierName)}'`;
+            return fetch(sUrl)
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error("Failed to fetch GST details.");
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    const aGstChecks = data.value || [];
+                    this.getView().getModel("gstValidationModel").setProperty("/gstChecks", aGstChecks);
+                })
+                .catch(err => {
+                    // Don't show a popup for this, as it might not exist for all suppliers
+                    console.error("Error fetching GST details:", err.message);
+                });
+        },
         _fetchSupplierDetails: function (sSupplierName) {
             return fetch(this.getURL() + `/odata/v4/supplier/getsuppliers`)
                 .then(res => res.json())

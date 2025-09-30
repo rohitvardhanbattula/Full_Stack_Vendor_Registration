@@ -11,7 +11,17 @@
         title="Supplier Details"
         showNavButton="true"
         navButtonPress=".onNavBack"
-        class="sapUiResponsiveContentPadding"> <content>
+        class="sapUiResponsiveContentPadding"> 
+        <headerContent>
+            <ObjectStatus
+                title="Status"
+                text="{status}"
+                state="{= 
+                    ${status} === 'Accepted' || ${status} === 'Approved' ? 'Success' : 
+                    (${status} === 'Rejected' ? 'Error' : 'Warning') 
+                }" />
+        </headerContent>
+        <content>
             <Panel expandable="true" expanded="true" width="auto" class="sapUiSmallMarginBottom">
                 <headerToolbar>
                     <Toolbar>
@@ -50,30 +60,39 @@
                 </content>
             </Panel>
 
-            <Panel expandable="true" expanded="true" width="auto" class="sapUiSmallMarginBottom">
-                 <headerToolbar>
+             <Panel expandable="true" expanded="true" width="auto" class="sapUiSmallMarginBottom">
+                <headerToolbar>
                     <Toolbar>
                         <Title text="AI &amp; Validation Checks" />
                     </Toolbar>
                 </headerToolbar>
                 <content>
-                    <l:Grid defaultSpan="XL6 L6 M12 S12" >
+                    <l:Grid defaultSpan="XL6 L6 M12 S12" vSpacing="1.5rem">
                         <VBox>
                             <Title text="Extracted text through AI" level="H3" class="sapUiSmallMarginBottom"/>
-                            <Text text="{aiExtractedText}" />
+                            <Text text="{aiExtractedText}" wrapping="true" />
                         </VBox>
                         <VBox>
-                            <Title text="GST Validation" level="H3" class="sapUiSmallMarginBottom"/>
-                            <Table inset="false" showNoData="false">
+                            <Title text="GST Validation Checks" level="H3" class="sapUiSmallMarginBottom"/>
+                            <Table
+                                inset="false"
+                                items="{gstValidationModel>/gstChecks}">
                                 <columns>
-                                    <Column width="6rem"><Text text="Status"/></Column>
+                                    <Column width="8rem"><Text text="Field"/></Column>
+                                    <Column width="5rem" hAlign="Center"><Text text="Status"/></Column>
                                     <Column><Text text="Remarks"/></Column>
                                 </columns>
                                 <items>
                                     <ColumnListItem>
                                         <cells>
-                                            <core:Icon src="{= ${gstValidationStatus} === 'Success' ? 'sap-icon://accept' : 'sap-icon://decline' }" color="{= ${gstValidationStatus} === 'Success' ? 'Positive' : 'Negative' }" size="1.5rem" class="sapUiSmallMargin"/>
-                                            <Text text="{gstValidationRemarks}" />
+                                            <Text text="{gstValidationModel>field}" />
+                                            <core:Icon
+                                                src="{= ${gstValidationModel>status} === 'Success' ? 'sap-icon://accept' : 'sap-icon://decline' }"
+                                                color="{= ${gstValidationModel>status} === 'Success' ? 'Positive' : 'Negative' }"
+                                                size="1.2rem"
+                                                class="sapUiSmallMargin"
+                                                tooltip="{gstValidationModel>status}" />
+                                            <Text text="{gstValidationModel>remarks}" />
                                         </cells>
                                     </ColumnListItem>
                                 </items>

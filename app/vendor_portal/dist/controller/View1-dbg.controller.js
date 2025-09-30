@@ -8,13 +8,33 @@ sap.ui.define([
 ], function (Controller, MessageToast, JSONModel, MessageBox, Fragment, Spreadsheet) {
     "use strict";
     return Controller.extend("vendorportal.controller.View1", {
-        
+
         getURL: function () {
             return sap.ui.require.toUrl("vendorportal");
         },
 
         onInit: function () {
             const oView = this.getView();
+            const oModel = new JSONModel({
+                supplierData: {
+                    supplierName: "",
+                    businessPartnerId: "",
+                    mainAddress: { street: "", city: "", postalCode: "", country: "", region: "" },
+                    primaryContact: { firstName: "", lastName: "", email: "", phone: "" },
+                    categoryAndRegion: { category: "", region: "" },
+                    additionalInfo: { details: "" }
+                },
+                aiExtractedText: "",
+                gstValidation: {
+                    results: [],
+                    overallStatus: "Pending"
+                },
+                uploadedFiles: [],
+                suppliers: [],
+                approvers: []
+            });
+            this.getView().setModel(oModel);
+
             if (!this._oProgressDialog) {
                 Fragment.load({
                     id: oView.getId(),
@@ -25,51 +45,16 @@ sap.ui.define([
                     oView.addDependent(dialog);
                 });
             }
-            const oModel = new JSONModel({
-                supplierData: {
-                    supplierName: "",
-                    businessPartnerId: "",
-                    aiExtractedText: "",
-                    gstValidationStatus: "",
-                    gstValidationRemarks: "",
-                    mainAddress: {
-                        street: "",
-                        line2: "",
-                        line3: "",
-                        city: "",
-                        postalCode: "",
-                        country: "",
-                        region: ""
-                    },
-                    primaryContact: {
-                        firstName: "",
-                        lastName: "",
-                        email: "",
-                        phone: ""
-                    },
-                    categoryAndRegion: {
-                        category: "",
-                        region: ""
-                    },
-                    additionalInfo: {
-                        details: ""
-                    }
-                },
-                suppliers: [],
-                uploadedFiles: []
-            });
-            this.getView().setModel(oModel);
 
             ["inpSupplierName", "inpCountry", "inpFirstName", "inpEmail", "inpCategory"].forEach(id => {
                 let oInput = this.byId(id);
                 if (oInput) {
-                    oInput.attachChange(function (evt) {
+                    oInput.attachChange(evt => {
                         if (evt.getParameter("value")) {
                             evt.getSource().setValueState("None");
                         }
                     });
                 }
-                
             });
         },
 
@@ -185,10 +170,7 @@ sap.ui.define([
         _setStepStatus: function (sStep, sStatus) {
             const oBusyIndicator = this.byId(`${sStep}BusyIndicator`);
             const oStatusIcon = this.byId(`${sStep}StatusIcon`);
-
-            if (!oBusyIndicator || !oStatusIcon) {
-                return;
-            }
+            if (!oBusyIndicator || !oStatusIcon) return;
 
             oBusyIndicator.setVisible(sStatus === "InProgress");
             oStatusIcon.setVisible(sStatus !== "InProgress");
@@ -203,59 +185,74 @@ sap.ui.define([
         },
 
         onSaveSupplier: async function () {
-            const oData = this.getView().getModel().getProperty("/supplierData");
-            const aUploadedFiles = this.getView().getModel().getProperty("/uploadedFiles") || [];
+            const oModel = this.getView().getModel();
+            const oData = oModel.getProperty("/supplierData");
+            const aUploadedFiles = oModel.getProperty("/uploadedFiles") || [];
 
-            let extractedGstin = "";
-            let validationStatus = "Not Performed";
-            let validationRemarks = "No GST document found.";
+            if (aUploadedFiles.length === 0) {
+                MessageBox.warning("Please upload at least one file to proceed.");
+                return;
+            }
 
             if (this._oProgressDialog) {
                 this._oProgressDialog.open();
-                this._setStepStatus("gst", "InProgress");
                 this._setStepStatus("supplier", "InProgress");
+                this._setStepStatus("gst", "InProgress");
                 this.byId("progressDialogCloseButton").setEnabled(false);
             }
 
             try {
-                if (aUploadedFiles.length > 0) {
-                    for (const fileObj of aUploadedFiles) {
-                        const gstin = await this._extractGSTFromFile(fileObj.file);
-                        if (gstin) {
-                            extractedGstin = gstin;
-                            const validationResult = await this._validateGST(gstin, oData);
-                            validationStatus = validationResult.status;
-                            validationRemarks = validationResult.remarks;
-                            break;
-                        }
-                    }
+                const combinedExtractedText = await this._extractTextFromFile(aUploadedFiles[0].file);
+                oModel.setProperty("/aiExtractedText", combinedExtractedText);
+
+                const gstinRegex = /\b\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}Z[A-Z\d]\b/;
+                const gstinMatch = combinedExtractedText.match(gstinRegex);
+                const gstin = gstinMatch ? gstinMatch[0] : null;
+
+                let validationData = null;
+                if (gstin) {
+                    validationData = await this._validateGST(gstin, oData);
+                    oModel.setProperty("/gstValidation", validationData);
+                    this._setStepStatus("gst", validationData.overallStatus);
+                } else {
+                    this._setStepStatus("gst", "Failed");
+                    oModel.setProperty("/gstValidation/remarks", "GSTIN could not be parsed from extracted text.");
                 }
 
-                if (!extractedGstin) {
-                    validationStatus = "Failed";
-                }
-
-                this._setStepStatus("gst", validationStatus);
-
-                const res = await fetch(this.getURL() + `/odata/v4/supplier/createSupplierWithFiles`, {
+                await fetch(this.getURL() + `/odata/v4/supplier/createSupplierWithFiles`, {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        supplierData: oData
-                    })
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ supplierData: oData })
                 });
-
-                if (!res.ok) {
-                    const errorResult = await res.json();
-                    this._setStepStatus("supplier", "Failed");
-                    MessageBox.error(errorResult.error?.message || "Supplier creation failed.");
-                    return;
-                }
-
                 this._setStepStatus("supplier", "Success");
 
+                if (combinedExtractedText) {
+                    await fetch(this.getURL() + `/odata/v4/supplier/saveextractedtext`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            suppliername: oData.supplierName,
+                            extractedGstin: combinedExtractedText
+                        })
+                    });
+                }
+
+                if (validationData && validationData.results.length > 0) {
+                    const validationPromises = validationData.results.map(result => {
+                        return fetch(this.getURL() + `/odata/v4/supplier/saveValidationResult`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                supplierName: oData.supplierName,
+                                field: result.field,
+                                validationStatus: result.status,
+                                validationRemarks: result.remarks
+                            })
+                        });
+                    });
+                    await Promise.all(validationPromises);
+                }
+                
                 if (aUploadedFiles.length > 0) {
                     const formData = new FormData();
                     formData.append("supplierName", oData.supplierName);
@@ -266,27 +263,15 @@ sap.ui.define([
                     });
                 }
 
-                await fetch(this.getURL() + `/odata/v4/supplier/saveValidationResult`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        supplierName: oData.supplierName,
-                        extractedGstin: extractedGstin,
-                        validationStatus: validationStatus,
-                        validationRemarks: validationRemarks
-                    })
-                });
-
                 this._resetForm();
                 const oWizard = this.byId("createWizard");
                 if (oWizard) oWizard.discardProgress(this.byId("step1"));
 
             } catch (err) {
                 console.error("An unexpected error occurred:", err);
-                this._setStepStatus("supplier", "Failed");
                 MessageBox.error("An unexpected error occurred during the submission process.");
+                this._setStepStatus("supplier", "Failed");
+                this._setStepStatus("gst", "Failed");
             } finally {
                 if (this._oProgressDialog) {
                     this.byId("progressDialogCloseButton").setEnabled(true);
@@ -294,120 +279,90 @@ sap.ui.define([
             }
         },
 
-        _extractGSTFromFile: async function (file) {
+        _extractTextFromFile: async function (file) {
             try {
                 const formData = new FormData();
                 formData.append('file', file);
-
-                const response = await fetch(this.getURL() +'/fileextraction', {
-                    method: 'POST',
-                    body: formData
-                });
+                const response = await fetch(this.getURL() +'/fileextraction', { method: 'POST', body: formData });
 
                 if (!response.ok) {
-                    console.error('Failed to extract GST from file.');
+                    const errData = await response.json();
+                    MessageToast.show(errData.error || "Failed to extract text from file.");
                     return "";
                 }
-
                 const data = await response.json();
-                return data.gstin || "";
+                return data.extractedText || "";
             } catch (err) {
-                console.error("Backend GST extraction error:", err);
+                console.error("Backend text extraction error:", err);
                 return "";
             }
         },
 
         _validateGST: async function (gstin, supplierData) {
-            if (!gstin) {
-                return {
-                    status: "Failed",
-                    remarks: "GST Number could not be found for validation."
-                };
-            }
+    // Helper function to clean strings for a better comparison
+    const normalizeString = (sValue) => {
+        if (!sValue) {
+            return "";
+        }
+        // Converts to lowercase and removes all spaces, periods, and commas
+        return sValue.toLowerCase().replace(/[\s.,]/g, '');
+    };
 
-            try {
-                const response = await fetch(this.getURL() +'/fetchGSTDetails', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        gstin
-                    })
-                });
+    try {
+        const response = await fetch(this.getURL() +'/fetchGSTDetails', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ gstin: gstin })
+        });
 
-                const gstData = await response.json();
+        if (!response.ok) {
+            const errData = await response.json();
+            return { results: [], overallStatus: 'Failed', remarks: errData.error };
+        }
 
-                if (!response.ok) {
-                    return {
-                        status: "Failed",
-                        remarks: gstData.error || "Error fetching GST details from external service."
-                    };
-                }
+        const gstApiData = await response.json();
+        const validationResults = [];
+        let overallStatus = "Success";
 
-                const errors = [];
-                const clean = str => str?.toLowerCase().replace(/\s+/g, " ").trim();
+        // --- FIX #1: Use the normalizeString helper for a smarter comparison ---
+        const isNameMatch = normalizeString(gstApiData.gstTradeName) === normalizeString(supplierData.supplierName);
 
-                if (gstData.gstStatus !== "Active") {
-                    errors.push("GST Number is not active.");
-                }
-                if (clean(gstData.gstTradeName) !== clean(supplierData.supplierName)) {
-                    errors.push(`Trade Name mismatch: GST record has "${gstData.gstTradeName}".`);
-                }
-                if (gstData.gstPincode !== supplierData.mainAddress.postalCode) {
-                    errors.push(`Pincode mismatch: GST record has "${gstData.gstPincode}".`);
-                }
+        validationResults.push({
+            field: "Trade Name",
+            status: isNameMatch ? "Success" : "Failed",
+            // --- FIX #2: Show the user's input as the expected name on failure ---
+            remarks: isNameMatch ? "Match" : `Expected: ${gstApiData.gstTradeName}`
+        });
+        if (!isNameMatch) overallStatus = "Failed";
 
-                if (errors.length > 0) {
-                    return {
-                        status: "Failed",
-                        remarks: errors.join("\n")
-                    };
-                }
+        const isPincodeMatch = gstApiData.gstPincode === supplierData.mainAddress.postalCode;
+        validationResults.push({
+            field: "Pincode",
+            status: isPincodeMatch ? "Success" : "Failed",
+            remarks: isPincodeMatch ? "Match" : `Expected: ${gstApiData.gstPincode}`
+        });
+        if (!isPincodeMatch) overallStatus = "Failed";
 
-                return {
-                    status: "Success",
-                    remarks: "Validated successfully."
-                };
+        return { results: validationResults, overallStatus: overallStatus };
 
-            } catch (err) {
-                console.error("GST validation error:", err);
-                return {
-                    status: "Failed",
-                    remarks: "A technical error occurred while validating the GST Number."
-                };
-            }
-        },
+    } catch (err) {
+        return { results: [], overallStatus: 'Failed', remarks: 'Technical error during validation.' };
+    }
+},
 
         _resetForm: function () {
             const oModel = this.getView().getModel();
             oModel.setProperty("/supplierData", {
                 supplierName: "",
-                mainAddress: {
-                    street: "",
-                    line2: "",
-                    line3: "",
-                    city: "",
-                    postalCode: "",
-                    country: "",
-                    region: ""
-                },
-                primaryContact: {
-                    firstName: "",
-                    lastName: "",
-                    email: "",
-                    phone: ""
-                },
-                categoryAndRegion: {
-                    category: "",
-                    region: ""
-                },
-                additionalInfo: {
-                    details: ""
-                }
+                mainAddress: { street: "", city: "", postalCode: "", country: "", region: "" },
+                primaryContact: { firstName: "", lastName: "", email: "", phone: "" },
+                categoryAndRegion: { category: "", region: "" },
+                additionalInfo: { details: "" }
             });
             oModel.setProperty("/uploadedFiles", []);
-
+            oModel.setProperty("/aiExtractedText", "");
+            oModel.setProperty("/gstValidation", { results: [], overallStatus: 'Pending' });
+            
             const oFileUploader = this.byId("fileUploader");
             if (oFileUploader) oFileUploader.clear();
         },

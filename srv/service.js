@@ -11,45 +11,52 @@ cds.on('bootstrap', app => {
 const app = cds.app;
 app.use(require("express").json());
 app.use(fileUpload());
-
+// This function should be in your main server file (e.g., app.js or server.js)
 app.post('/fileextraction', async (req, res) => {
-  const file = req.files?.file; // Assuming single file with form field 'file'
+    const file = req.files?.file;
+    if (!file) {
+        return res.status(400).json({ error: "No file uploaded" });
+    }
 
-  if (!file) {
-    return res.status(400).json({ error: "No file uploaded" });
-  }
+    try {
+        const base64Data = file.data.toString('base64');
+        const fileType = file.mimetype;
+        const destination = await getDestination({ destinationName: 'gemini_api' }, { useCache: false });
+        const url = destination.url.replace(/\/$/, '');
+        
+        // Prompt the AI to return structured JSON (this is more reliable)
+        const prompt = `
+            Extract the Trade Name, GSTIN, and PAN number from the document. 
+            Respond with only a valid JSON object in the format: 
+            {"tradeName": "<value>", "gstin": "<value>", "pan": "<value>"}.
+        `;
 
-  try {
-    // Convert file buffer to base64
-    const base64Data = file.data.toString('base64');
-    const fileType = file.mimetype;
-    const destination = await getDestination({ destinationName: 'gemini_api' }, { useCache: false });
-    if (!destination || !destination.url) throw new Error("Destination not found or invalid");
-    const url = destination.url.replace(/\/$/, '');
-    // Call Gemini API for GST extraction
-    const response = await fetch(url, {
+       const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{
           parts: [
-            { text: "Extract the first GST key value pair as {\"GSTIN\":\"<value>\"}" },
+            { text: prompt },
             { inline_data: { mime_type: fileType, data: base64Data } }
           ]
         }]
       })
     });
+        const result = await response.json();
+        let extractedJsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "{}";
+        extractedJsonText = extractedJsonText.replace(/```json/g, "").replace(/```/g, "").trim();
+        const extractedData = JSON.parse(extractedJsonText);
 
-    const result = await response.json();
-    const extractedText = result?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
-    const gstin = extractedText.match(/\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}Z[A-Z\d]/)?.[0] || "";
+        // --- KEY CHANGE: Format the JSON into a single string before sending to the frontend ---
+        const combinedText = `Trade Name: ${extractedData.tradeName || 'N/A'}\nGSTIN: ${extractedData.gstin || 'N/A'}\nPAN: ${extractedData.pan || 'N/A'}`;
 
-    return res.json({ gstin });
+        return res.json({ extractedText: combinedText });
 
-  } catch (err) {
-    console.error("Gemini API error:", err);
-    return res.status(500).json({ error: "Error extracting GSTIN" });
-  }
+    } catch (err) {
+        console.error("Gemini API error:", err);
+        return res.status(500).json({ error: "Error extracting details from document" });
+    }
 });
 
 
@@ -439,6 +446,7 @@ module.exports = cds.service.impl(function () {
       await DELETE.from("my.supplier.Supplier");
       await DELETE.from("my.supplier.Address");
       await DELETE.from("my.supplier.Contact");
+      await DELETE.from("my.supplier.gst");
       await DELETE.from("my.supplier.CategoryRegion");
       await DELETE.from("my.supplier.AdditionalInfo");
 
@@ -504,39 +512,33 @@ module.exports = cds.service.impl(function () {
     return approvals;
   });
 
-   this.on('saveValidationResult', async (req) => {
-        // Destructure the parameters from the request payload
-        const { supplierName, extractedGstin, validationStatus, validationRemarks } = req.data;
+   this.on('saveextractedtext', async (req) => {
+        const { suppliername, extractedGstin } = req.data; // Matches your CDS action definition
+        
+        // Note: The field in the Supplier entity should match, e.g., 'extractedText'
+        const result = await UPDATE('my.supplier.Supplier')
+            .set({ aiExtractedText: extractedGstin }) 
+            .where({ supplierName: suppliername });
 
-        // Ensure a supplier name was provided
-        if (!supplierName) {
-            return req.error(400, 'Supplier Name is required to save validation results.');
+        if (result === 0) {
+            return req.error(404, `Supplier '${suppliername}' not found.`);
         }
+        return `Extracted text for ${suppliername} has been saved.`;
+    });
 
-        try {
-            // Perform an UPDATE on the Suppliers entity
-            const result = await UPDATE('my.supplier.Supplier')
-                .set({
-                    aiExtractedText: extractedGstin,
-                    gstValidationStatus: validationStatus,
-                    gstValidationRemarks: validationRemarks
-                })
-                .where({ supplierName: supplierName });
+    // Correct implementation for saveValidationResult
+    this.on('saveValidationResult', async (req) => {
+        const { supplierName, field, validationStatus, validationRemarks } = req.data;
 
-            // Check if any row was actually updated
-            if (result === 0) {
-                return req.error(404, `Supplier '${supplierName}' not found.`);
-            }
-
-            console.log(`Successfully updated validation results for supplier: ${supplierName}`);
-            
-            // Return a success message
-            return `Validation results for ${supplierName} have been saved.`;
-
-        } catch (error) {
-            console.error('Error saving validation result:', error);
-            return req.error(500, 'An internal error occurred while saving the validation results.');
-        }
+        // You are CREATING new validation entries, so you must use INSERT.
+        await INSERT.into('my.supplier.gst').entries({
+            supplierName: supplierName,
+            field: field,
+            status: validationStatus,
+            remarks: validationRemarks
+        });
+        
+        return `Validation result for field '${field}' has been saved.`;
     });
   this.on("downloadAttachments", async (req) => {
     const { supplierName } = req.data;
