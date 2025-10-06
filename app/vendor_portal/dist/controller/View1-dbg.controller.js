@@ -193,7 +193,30 @@ sap.ui.define([
                 MessageBox.warning("Please upload at least one file to proceed.");
                 return;
             }
+            try {
+                const checkResponse = await fetch(this.getURL() + `/odata/v4/supplier/checkIfSupplierExists`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ supplierName: oData.supplierName })
+                });
 
+                if (checkResponse.ok) {
+                    const result = await checkResponse.json();
+                    if (result.value === true) { // Assuming the action returns { "value": true } if exists
+                        MessageBox.error(`A supplier with the name "${oData.supplierName}" already exists.`);
+                        return; // Stop the function here
+                    }
+                } else {
+                    // Handle cases where the check itself fails
+                    const errorResult = await checkResponse.json();
+                    MessageBox.error(errorResult.error?.message || "Failed to check supplier existence.");
+                    return;
+                }
+            } catch (err) {
+                MessageBox.error("An error occurred while checking for the supplier. Please try again.");
+                console.error("Supplier check error:", err);
+                return;
+            }
             if (this._oProgressDialog) {
                 this._oProgressDialog.open();
                 this._setStepStatus("supplier", "InProgress");
@@ -225,6 +248,7 @@ sap.ui.define([
                     body: JSON.stringify({ supplierData: oData })
                 });
                 this._setStepStatus("supplier", "Success");
+                this._navigationDetails = { supplierId:oData.supplierName }; 
 
                 if (combinedExtractedText) {
                     await fetch(this.getURL() + `/odata/v4/supplier/saveextractedtext`, {
@@ -252,12 +276,12 @@ sap.ui.define([
                     });
                     await Promise.all(validationPromises);
                 }
-                
+
                 if (aUploadedFiles.length > 0) {
                     const formData = new FormData();
                     formData.append("supplierName", oData.supplierName);
                     aUploadedFiles.forEach(f => formData.append("files", f.file));
-                    await fetch(this.getURL() +`/uploadattachments`, {
+                    await fetch( this.getURL() +`/uploadattachments`, {
                         method: "POST",
                         body: formData
                     });
@@ -283,7 +307,7 @@ sap.ui.define([
             try {
                 const formData = new FormData();
                 formData.append('file', file);
-                const response = await fetch(this.getURL() +'/fileextraction', { method: 'POST', body: formData });
+                const response = await fetch(this.getURL() + '/fileextraction', { method: 'POST', body: formData });
 
                 if (!response.ok) {
                     const errData = await response.json();
@@ -299,56 +323,56 @@ sap.ui.define([
         },
 
         _validateGST: async function (gstin, supplierData) {
-    // Helper function to clean strings for a better comparison
-    const normalizeString = (sValue) => {
-        if (!sValue) {
-            return "";
-        }
-        // Converts to lowercase and removes all spaces, periods, and commas
-        return sValue.toLowerCase().replace(/[\s.,]/g, '');
-    };
+            // Helper function to clean strings for a better comparison
+            const normalizeString = (sValue) => {
+                if (!sValue) {
+                    return "";
+                }
+                // Converts to lowercase and removes all spaces, periods, and commas
+                return sValue.toLowerCase().replace(/[\s.,]/g, '');
+            };
 
-    try {
-        const response = await fetch(this.getURL() +'/fetchGSTDetails', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ gstin: gstin })
-        });
+            try {
+                const response = await fetch(this.getURL() + '/fetchGSTDetails', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ gstin: gstin })
+                });
 
-        if (!response.ok) {
-            const errData = await response.json();
-            return { results: [], overallStatus: 'Failed', remarks: errData.error };
-        }
+                if (!response.ok) {
+                    const errData = await response.json();
+                    return { results: [], overallStatus: 'Failed', remarks: errData.error };
+                }
 
-        const gstApiData = await response.json();
-        const validationResults = [];
-        let overallStatus = "Success";
+                const gstApiData = await response.json();
+                const validationResults = [];
+                let overallStatus = "Success";
 
-        // --- FIX #1: Use the normalizeString helper for a smarter comparison ---
-        const isNameMatch = normalizeString(gstApiData.gstTradeName) === normalizeString(supplierData.supplierName);
+                // --- FIX #1: Use the normalizeString helper for a smarter comparison ---
+                const isNameMatch = normalizeString(gstApiData.gstTradeName) === normalizeString(supplierData.supplierName);
 
-        validationResults.push({
-            field: "Trade Name",
-            status: isNameMatch ? "Success" : "Failed",
-            // --- FIX #2: Show the user's input as the expected name on failure ---
-            remarks: isNameMatch ? "Match" : `Expected: ${gstApiData.gstTradeName}`
-        });
-        if (!isNameMatch) overallStatus = "Failed";
+                validationResults.push({
+                    field: "Trade Name",
+                    status: isNameMatch ? "Success" : "Failed",
+                    // --- FIX #2: Show the user's input as the expected name on failure ---
+                    remarks: isNameMatch ? "Match" : `Expected: ${gstApiData.gstTradeName}`
+                });
+                if (!isNameMatch) overallStatus = "Failed";
 
-        const isPincodeMatch = gstApiData.gstPincode === supplierData.mainAddress.postalCode;
-        validationResults.push({
-            field: "Pincode",
-            status: isPincodeMatch ? "Success" : "Failed",
-            remarks: isPincodeMatch ? "Match" : `Expected: ${gstApiData.gstPincode}`
-        });
-        if (!isPincodeMatch) overallStatus = "Failed";
+                const isPincodeMatch = gstApiData.gstPincode === supplierData.mainAddress.postalCode;
+                validationResults.push({
+                    field: "Pincode",
+                    status: isPincodeMatch ? "Success" : "Failed",
+                    remarks: isPincodeMatch ? "Match" : `Expected: ${gstApiData.gstPincode}`
+                });
+                if (!isPincodeMatch) overallStatus = "Failed";
 
-        return { results: validationResults, overallStatus: overallStatus };
+                return { results: validationResults, overallStatus: overallStatus };
 
-    } catch (err) {
-        return { results: [], overallStatus: 'Failed', remarks: 'Technical error during validation.' };
-    }
-},
+            } catch (err) {
+                return { results: [], overallStatus: 'Failed', remarks: 'Technical error during validation.' };
+            }
+        },
 
         _resetForm: function () {
             const oModel = this.getView().getModel();
@@ -362,7 +386,7 @@ sap.ui.define([
             oModel.setProperty("/uploadedFiles", []);
             oModel.setProperty("/aiExtractedText", "");
             oModel.setProperty("/gstValidation", { results: [], overallStatus: 'Pending' });
-            
+
             const oFileUploader = this.byId("fileUploader");
             if (oFileUploader) oFileUploader.clear();
         },
@@ -370,6 +394,14 @@ sap.ui.define([
         onCloseProgressDialog: function () {
             if (this._oProgressDialog) {
                 this._oProgressDialog.close();
+            }
+            if (this._navigationDetails && this._navigationDetails.supplierId) {
+                const oRouter = this.getOwnerComponent().getRouter();
+                oRouter.navTo("SupplierDetail", {
+                    supplierId: this._navigationDetails.supplierId
+                });
+
+                this._navigationDetails = null;
             }
         },
 

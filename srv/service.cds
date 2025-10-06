@@ -107,7 +107,7 @@ service SupplierService {
         suppliername :String,
         extractedGstin : String
     );
-
+    action checkIfSupplierExists(supplierName: String) returns Boolean;
     entity gst as projection on my.gst;
 }
  

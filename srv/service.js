@@ -368,7 +368,17 @@ module.exports = cds.service.impl(function () {
       return req.error(500, 'Error fetching suppliers: ' + e.message);
     }
   });
-
+  this.on('checkIfSupplierExists', async (req) => {
+        const { supplierName } = req.data;
+        if (!supplierName) {
+            return false;
+        }
+        // Use SELECT.one to be efficient. We only need to know if at least one exists.
+        const existingSupplier = await SELECT.one.from('my.supplier.Supplier').where({ supplierName: supplierName });
+        
+        // If 'existingSupplier' is not null, it exists. Return true. Otherwise, return false.
+        return !!existingSupplier; 
+    });
   this.on('createSupplierWithFiles', async (req) => {
     try {
       const supplierData = req.data.supplierData;
