@@ -1,18 +1,20 @@
-<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core" xmlns:f="sap.ui.layout.form">
     <Dialog id="updateApproverDialog" title="Update Approver">
-        <VBox class="sapUiSmallMargin">
-            <Label text="Name"/>
-            <Input id="inputName1" placeholder="Enter Name"/>
-            
-            <Label text="Email"/>
-            <Input id="inputEmail1" type="Email" placeholder="Enter Email"/>
-            
-            <Label text="Level"/>
-            <Input id="inputLevel1" placeholder="Enter Level"/>
-            
-            <Label text="Country"/>
-            <Input id="inputCountry1" placeholder="Enter Country"/>
-        </VBox>
+        <content>
+            <f:SimpleForm editable="true" layout="ResponsiveGridLayout">
+                <Label text="Name" required="true"/>
+                <Input value="{approverModel>/selectedApprover/name}"/>
+                
+                <Label text="Email" required="true"/>
+                <Input value="{approverModel>/selectedApprover/email}" type="Email"/>
+                
+                <Label text="Level" required="true"/>
+                <Input value="{approverModel>/selectedApprover/level}"/>
+                
+                <Label text="Country" required="true"/>
+                <Input value="{approverModel>/selectedApprover/country}"/>
+            </f:SimpleForm>
+        </content>
         <beginButton>
             <Button text="Update" type="Emphasized" press="onSaveUpdateApprover"/>
         </beginButton>

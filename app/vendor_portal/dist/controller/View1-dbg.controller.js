@@ -4,8 +4,10 @@ sap.ui.define([
     "sap/ui/model/json/JSONModel",
     "sap/m/MessageBox",
     "sap/ui/core/Fragment",
-    "sap/ui/export/Spreadsheet"
-], function (Controller, MessageToast, JSONModel, MessageBox, Fragment, Spreadsheet) {
+    
+    "sap/ui/model/Filter",
+    "sap/ui/model/FilterOperator"
+], function (Controller, MessageToast, JSONModel, MessageBox, Fragment, Filter,FilterOperator) {
     "use strict";
     return Controller.extend("vendorportal.controller.View1", {
 
@@ -248,7 +250,7 @@ sap.ui.define([
                     body: JSON.stringify({ supplierData: oData })
                 });
                 this._setStepStatus("supplier", "Success");
-                this._navigationDetails = { supplierId:oData.supplierName }; 
+                this._navigationDetails = { supplierId: oData.supplierName };
 
                 if (combinedExtractedText) {
                     await fetch(this.getURL() + `/odata/v4/supplier/saveextractedtext`, {
@@ -281,7 +283,7 @@ sap.ui.define([
                     const formData = new FormData();
                     formData.append("supplierName", oData.supplierName);
                     aUploadedFiles.forEach(f => formData.append("files", f.file));
-                    await fetch( this.getURL() +`/uploadattachments`, {
+                    await fetch(this.getURL() + `/uploadattachments`, {
                         method: "POST",
                         body: formData
                     });
@@ -459,7 +461,7 @@ sap.ui.define([
         },
 
         onOpenApproverList: async function () {
-            var oView = this.getView();
+            const oView = this.getView();
             if (!this._oApproverDialog) {
                 this._oApproverDialog = await Fragment.load({
                     id: oView.getId(),
@@ -468,144 +470,120 @@ sap.ui.define([
                 });
                 oView.addDependent(this._oApproverDialog);
             }
-            const fetchApprovers = () => {
-                fetch(this.getURL() + `/odata/v4/supplier/Approvers`)
-                    .then(res => res.json())
-                    .then(data => {
-                        const approvers = Array.isArray(data.value) ? data.value : data;
-                        this.getView().getModel().setProperty("/approvers", approvers);
-                    })
-                    .catch(err => {
-                        MessageBox.error("Error fetching approvers: " + err.message);
-                    });
-            };
-            fetchApprovers();
-            this._approverInterval = setInterval(() => {
-                if (this._oApproverDialog && this._oApproverDialog.isOpen()) {
-                    fetchApprovers();
-                }
-            }, 3000);
+
+            // Create a dedicated model for the dialog to manage data and UI state
+            const oApproverModel = new JSONModel({
+                approvers: [],
+                newApprover: { name: "", email: "", level: "", country: "" },
+                selectedApprover: {},
+                isEditEnabled: false
+            });
+            this._oApproverDialog.setModel(oApproverModel, "approverModel");
+
+            // Fetch the latest data when opening
+            this._fetchApprovers();
+
+            // Reset UI state every time
+            this.byId("approverTable").removeSelections(true);
+            this.byId("approverSearchField").setValue("");
+            oApproverModel.setProperty("/isEditEnabled", false);
+
             this._oApproverDialog.open();
         },
 
         onCloseApproverList: function () {
-            if (this._oApproverDialog) {
-                this._oApproverDialog.close();
-            }
-            if (this._approverInterval) {
-                clearInterval(this._approverInterval);
-                this._approverInterval = null;
-            }
+            this._oApproverDialog.close();
         },
 
-        onCreateApprover: function () {
-            var oView = this.getView();
-            if (!this.byId("createApproverDialog")) {
-                Fragment.load({
+        _fetchApprovers: function () {
+            const oApproverModel = this._oApproverDialog.getModel("approverModel");
+            fetch(this.getURL() + `/odata/v4/supplier/Approvers`)
+                .then(res => res.json())
+                .then(data => {
+                    const approvers = Array.isArray(data.value) ? data.value : [];
+                    oApproverModel.setProperty("/approvers", approvers);
+                    this.byId("approverTableTitle").setText(`Approvers (${approvers.length})`);
+                })
+                .catch(err => MessageBox.error("Error fetching approvers: " + err.message));
+        },
+
+        // --- UI EVENT HANDLERS ---
+
+        onSearchApprovers: function (oEvent) {
+            const sQuery = oEvent.getParameter("newValue");
+    const oTable = this.byId("approverTable");
+    const oBinding = oTable.getBinding("items");
+
+    // Add a check to ensure the binding exists before filtering
+    if (!oBinding) {
+        return; 
+    }
+
+    if (sQuery) {
+        // THE FIX: The third parameter 'false' makes the filter case-insensitive.
+        const oFilter = new Filter({
+            filters: [
+                new Filter("name", FilterOperator.Contains, sQuery, false),
+                new Filter("email", FilterOperator.Contains, sQuery, false)
+            ],
+            and: false
+        });
+        oBinding.filter([oFilter]);
+    } else {
+        // Remove the filter when the search field is empty
+        oBinding.filter([]);
+    }
+        },
+
+        onApproverSelectionChange: function (oEvent) {
+            const isSelected = oEvent.getSource().getSelectedItems().length > 0;
+            this._oApproverDialog.getModel("approverModel").setProperty("/isEditEnabled", isSelected);
+        },
+
+        // --- CREATE DIALOG ---
+
+        onCreateApprover: async function () {
+            const oView = this.getView();
+            if (!this._oCreateApproverDialog) {
+                this._oCreateApproverDialog = await Fragment.load({
                     id: oView.getId(),
                     name: "vendorportal.view.CreateApprover",
                     controller: this
-                }).then(function (oDialog) {
-                    oView.addDependent(oDialog);
-                    oDialog.open();
                 });
-            } else {
-                this.byId("createApproverDialog").open();
+                oView.addDependent(this._oCreateApproverDialog);
             }
-        },
-
-        onUpdateApprover: function () {
-            var oView = this.getView();
-            if (!this.byId("updateApproverDialog")) {
-                Fragment.load({
-                    id: oView.getId(),
-                    name: "vendorportal.view.UpdateApprover",
-                    controller: this
-                }).then(function (oDialog) {
-                    oView.addDependent(oDialog);
-                    oDialog.open();
-                });
-            } else {
-                this.byId("updateApproverDialog").open();
-            }
-        },
-
-        onSaveUpdateApprover: async function () {
-            try {
-                const level = this.byId("inputLevel1").getValue();
-                const country = this.byId("inputCountry1").getValue();
-                const name = this.byId("inputName1").getValue();
-                const email = this.byId("inputEmail1").getValue();
-                if (!level || !country || !name || !email) {
-                    MessageBox.warning("Please fill all required fields.");
-                    return;
-                }
-                const body = {
-                    approverentry: {
-                        level: level,
-                        country: country,
-                        name: name,
-                        email: email
-                    }
-                };
-                const response = await fetch(this.getURL() + `/odata/v4/supplier/approverupdateentry`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(body)
-                });
-                const result = await response.json();
-                this.byId("inputLevel1").setValue("");
-                this.byId("inputCountry1").setValue("");
-                this.byId("inputName1").setValue("");
-                this.byId("inputEmail1").setValue("");
-                if (response.ok) {
-                    MessageToast.show(result.value);
-                    this.byId("updateApproverDialog").close();
-                } else {
-                    MessageBox.error(result.error?.message || "Failed to update approver");
-                }
-            } catch (e) {
-                MessageBox.error("Error: " + e.message);
-            }
+            // Share the same model between dialogs
+            this._oCreateApproverDialog.setModel(this._oApproverDialog.getModel("approverModel"), "approverModel");
+            this._oCreateApproverDialog.open();
         },
 
         onSaveApprover: async function () {
+            const oApproverModel = this._oApproverDialog.getModel("approverModel");
+            const oNewApprover = oApproverModel.getProperty("/newApprover");
+
+            if (!oNewApprover.name || !oNewApprover.email || !oNewApprover.level || !oNewApprover.country) {
+                MessageBox.warning("Please fill all required fields.");
+                return;
+            }
+
+            const body = { approverentry: oNewApprover };
+
             try {
-                const level = this.byId("inputLevel").getValue();
-                const country = this.byId("inputCountry").getValue();
-                const name = this.byId("inputName").getValue();
-                const email = this.byId("inputEmail").getValue();
-                if (!level || !country || !name || !email) {
-                    MessageBox.warning("Please fill all required fields.");
-                    return;
-                }
-                const body = {
-                    approverentry: {
-                        level: level,
-                        country: country,
-                        name: name,
-                        email: email
-                    }
-                };
                 const response = await fetch(this.getURL() + `/odata/v4/supplier/approverentry`, {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(body)
                 });
-                const result = await response.json();
-                this.byId("inputLevel").setValue("");
-                this.byId("inputCountry").setValue("");
-                this.byId("inputName").setValue("");
-                this.byId("inputEmail").setValue("");
+
                 if (response.ok) {
-                    MessageToast.show(result.value);
-                    this.byId("createApproverDialog").close();
+                    const result = await response.json();
+                    MessageToast.show(result.value || "Approver created successfully.");
+                    this._fetchApprovers();
+                    oApproverModel.setProperty("/newApprover", { name: "", email: "", level: "", country: "" }); // Clear the form
+                    this.onCancelApprover();
                 } else {
-                    MessageBox.error(result.error?.message || "Failed to insert approver");
+                    const error = await response.json();
+                    MessageBox.error(error.error?.message || "Failed to create approver.");
                 }
             } catch (e) {
                 MessageBox.error("Error: " + e.message);
@@ -613,11 +591,110 @@ sap.ui.define([
         },
 
         onCancelApprover: function () {
-            this.byId("createApproverDialog").close();
+            this._oCreateApproverDialog.close();
+        },
+
+        // --- UPDATE DIALOG ---
+
+        onUpdateApprover: async function () {
+            const oSelectedItem = this.byId("approverTable").getSelectedItem();
+            if (!oSelectedItem) return;
+
+            const oSelectedApprover = oSelectedItem.getBindingContext("approverModel").getObject();
+            this._oApproverDialog.getModel("approverModel").setProperty("/selectedApprover", { ...oSelectedApprover });
+
+            const oView = this.getView();
+            if (!this._oUpdateApproverDialog) {
+                this._oUpdateApproverDialog = await Fragment.load({
+                    id: oView.getId(),
+                    name: "vendorportal.view.UpdateApprover",
+                    controller: this
+                });
+                oView.addDependent(this._oUpdateApproverDialog);
+            }
+            this._oUpdateApproverDialog.setModel(this._oApproverDialog.getModel("approverModel"), "approverModel");
+            this._oUpdateApproverDialog.open();
+        },
+
+        onSaveUpdateApprover: async function () {
+            const oApproverModel = this._oApproverDialog.getModel("approverModel");
+            const oSelectedApprover = oApproverModel.getProperty("/selectedApprover");
+
+            // IMPORTANT: Your action needs the key to identify which record to update.
+            // Ensure the 'ID' or unique key is part of the oSelectedApprover object.
+
+            const body = { approverentry: oSelectedApprover };
+
+            try {
+                const response = await fetch(this.getURL() + `/odata/v4/supplier/approverupdateentry`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(body)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    MessageToast.show(result.value || "Approver updated successfully.");
+                    this._fetchApprovers();
+                    this.onCancelUpdateApprover();
+                } else {
+                    const error = await response.json();
+                    MessageBox.error(error.error?.message || "Failed to update approver.");
+                }
+            } catch (e) {
+                MessageBox.error("Error: " + e.message);
+            }
         },
 
         onCancelUpdateApprover: function () {
-            this.byId("updateApproverDialog").close();
+            this._oUpdateApproverDialog.close();
+        },
+
+        // --- DELETE ACTION ---
+
+        onDeleteApprover: function () {
+            const oSelectedItem = this.byId("approverTable").getSelectedItem();
+            if (!oSelectedItem) {
+                // No item selected, do nothing.
+                return;
+            }
+
+            const oSelectedApprover = oSelectedItem.getBindingContext("approverModel").getObject();
+
+            MessageBox.confirm(`Are you sure you want to delete "${oSelectedApprover.name}"?`, {
+                title: "Confirm Deletion",
+                onClose: async (sAction) => {
+                    if (sAction !== MessageBox.Action.OK) {
+                        // User cancelled the action.
+                        return;
+                    }
+
+                    // --- CHANGE IS HERE ---
+                    const body = {
+                        name: oSelectedApprover.name,
+                        country: oSelectedApprover.country,
+                        level: oSelectedApprover.level
+                    };
+
+                    try {
+                        const response = await fetch(this.getURL() + `/odata/v4/supplier/deleteapprover`, {
+                            method: "POST", // Actions are called with POST
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(body)
+                        });
+
+                        if (response.ok) {
+                            MessageToast.show("Approver deleted.");
+                            this._fetchApprovers(); // Refresh the list to reflect the change
+                        } else {
+                            const error = await response.json();
+                            MessageBox.error(error.error?.message || "Deletion failed.");
+                        }
+                    } catch (e) {
+                        MessageBox.error("An error occurred: " + e.message);
+                    }
+                }
+            });
         }
     });
 });

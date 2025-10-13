@@ -443,6 +443,26 @@ module.exports = cds.service.impl(function () {
     }
   });
 
+  this.on("deleteapprover", async (req) => {
+    const { name, level, country } = req.data;
+
+    if (!name) {
+        return req.error(400, 'An approver ID must be provided for deletion.');
+    }
+
+    try {
+        const result = await DELETE.from('my.supplier.Approver').where({name, level, country});
+
+        if (result === 0) {
+            return req.warn(404, `Approver with name ${name} not found.`);
+        }
+
+        return { message: "Approver deleted successfully." };
+
+    } catch (e) {
+        return req.error(500, 'Error deleting approver: ' + e.message);
+    }
+});
 
   this.on("resetAllData", async () => {
     try {

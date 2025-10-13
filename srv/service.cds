@@ -108,6 +108,7 @@ service SupplierService {
         extractedGstin : String
     );
     action deletesuppliers(supplierName : String) returns { message : String };
+    action deleteapprover(name : String, country: String, level: String) returns String;
     action checkIfSupplierExists(supplierName: String) returns Boolean;
     entity gst as projection on my.gst;
 }

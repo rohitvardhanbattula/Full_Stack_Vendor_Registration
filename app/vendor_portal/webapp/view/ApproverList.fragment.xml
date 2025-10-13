@@ -1,35 +1,55 @@
-<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
-    <Dialog id="approverDialog" title="Approver List" stretchOnPhone="true">
-        <VBox>
-            <Table id="approverTable" inset="false" items="{/approvers}">
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core" xmlns:l="sap.ui.layout">
+    <Dialog id="approverDialog" title="Manage Approvers" contentWidth="45rem" stretchOnPhone="true">
+        
+        <subHeader>
+            <Toolbar>
+                <SearchField id="approverSearchField" placeholder="Search by name or email..." width="100%" liveChange="onSearchApprovers"/>
+            </Toolbar>
+        </subHeader>
+
+        <content>
+            <Table id="approverTable"
+                   inset="false"
+                   items="{approverModel>/approvers}" 
+                   mode="SingleSelectLeft" 
+                   selectionChange="onApproverSelectionChange"
+                   noDataText="No approvers found. Click 'Create' to add one."
+                   alternateRowColors="true">
+
                 <headerToolbar>
                     <Toolbar>
-                        <Title text="Approvers"/>
+                        <Title id="approverTableTitle" text="Approvers"/>
                         <ToolbarSpacer/>
-                        <Button text="Update Approver" type="Emphasized" press="onUpdateApprover"/>
-                        <Button text="Create Approver" type="Emphasized" press="onCreateApprover"/>
+                        <Button id="deleteApproverButton" text="Delete" type="Transparent" press="onDeleteApprover" icon="sap-icon://delete" enabled="{approverModel>/isEditEnabled}"/>
                     </Toolbar>
                 </headerToolbar>
+
                 <columns>
-                    <Column><Text text="Name"/></Column>
-                    <Column><Text text="Email"/></Column>
-                    <Column><Text text="Level"/></Column>
-                    <Column><Text text="Country"/></Column>
+                    <Column width="35%"><Label text="Name"/></Column>
+                    <Column width="20%"><Label text="Level"/></Column>
+                    <Column width="45%"><Label text="Contact Info"/></Column>
                 </columns>
+
                 <items>
-                    <ColumnListItem>
+                    <ColumnListItem vAlign="Middle">
                         <cells>
-                            <Text text="{name}"/>
-                            <Text text="{email}"/>
-                            <Text text="{level}"/>
-                            <Text text="{country}"/>
+                            <ObjectIdentifier title="{approverModel>name}" text="{approverModel>country}"/>
+                            
+                            <ObjectStatus text="{approverModel>level}" state="{= ${approverModel>level} === '1' ? 'Warning' : 'Success' }"/>
+
+                            <l:HorizontalLayout>
+                                <core:Icon src="sap-icon://email" class="sapUiSmallMarginEnd"/>
+                                <Text text="{approverModel>email}"/>
+                            </l:HorizontalLayout>
                         </cells>
                     </ColumnListItem>
                 </items>
             </Table>
-        </VBox>
-        <endButton>
+        </content>
+        
+        <buttons>
+            <Button text="Create Approver" type="Emphasized" press="onCreateApprover" icon="sap-icon://add"/>
             <Button text="Close" press="onCloseApproverList"/>
-        </endButton>
+        </buttons>
     </Dialog>
 </core:FragmentDefinition>

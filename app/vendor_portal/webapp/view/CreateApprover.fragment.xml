@@ -1,18 +1,20 @@
-<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
-    <Dialog id="createApproverDialog" title="Create Approver">
-        <VBox class="sapUiSmallMargin">
-            <Label text="Name"/>
-            <Input id="inputName" placeholder="Enter Name"/>
-            
-            <Label text="Email"/>
-            <Input id="inputEmail" type="Email" placeholder="Enter Email"/>
-            
-            <Label text="Level"/>
-            <Input id="inputLevel" placeholder="Enter Level"/>
-            
-            <Label text="Country"/>
-            <Input id="inputCountry" placeholder="Enter Country"/>
-        </VBox>
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core" xmlns:f="sap.ui.layout.form">
+    <Dialog id="createApproverDialog" title="Create New Approver">
+        <content>
+            <f:SimpleForm editable="true" layout="ResponsiveGridLayout">
+                <Label text="Name" required="true"/>
+                <Input value="{approverModel>/newApprover/name}"/>
+                
+                <Label text="Email" required="true"/>
+                <Input value="{approverModel>/newApprover/email}" type="Email"/>
+                
+                <Label text="Level" required="true"/>
+                <Input value="{approverModel>/newApprover/level}" placeholder="e.g., 1, 2"/>
+                
+                <Label text="Country" required="true"/>
+                <Input value="{approverModel>/newApprover/country}"/>
+            </f:SimpleForm>
+        </content>
         <beginButton>
             <Button text="Create" type="Emphasized" press="onSaveApprover"/>
         </beginButton>

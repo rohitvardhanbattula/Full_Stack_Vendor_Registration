@@ -32,7 +32,7 @@
                 <headerToolbar>
                     <Toolbar>
                         <ToolbarSpacer />
-                        <Button id="deleteModeButton" text="Delete Suppliers" press=".onDeleteMode" type="Reject" icon="sap-icon://delete" />
+                        <Button id="deleteModeButton" text="Delete Suppliers" press=".onDeleteMode" type="Reject" icon="sap-icon://delete" visible="false" />
                         <Button id="confirmDeleteButton" text="Confirm" press=".onDeleteSelectedSuppliers" type="Reject" visible="false" />
                         <Button id="cancelDeleteButton" text="Cancel" press=".onCancelDelete" type="Transparent" visible="false" />
                     </Toolbar>
