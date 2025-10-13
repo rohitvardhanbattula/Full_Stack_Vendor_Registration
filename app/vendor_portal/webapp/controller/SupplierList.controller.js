@@ -31,7 +31,81 @@ sap.ui.define([
                 supplierId: sSupplierName
             });
         },
+        onDeleteMode: function () {
+            const oTable = this.byId("supplierTable");
+            oTable.setMode("MultiSelect");
 
+            this.byId("deleteModeButton").setVisible(false);
+            this.byId("confirmDeleteButton").setVisible(true);
+            this.byId("cancelDeleteButton").setVisible(true);
+        },
+
+        onCancelDelete: function () {
+            const oTable = this.byId("supplierTable");
+            oTable.setMode("None");
+            oTable.removeSelections(true);
+
+            this.byId("deleteModeButton").setVisible(true);
+            this.byId("confirmDeleteButton").setVisible(false);
+            this.byId("cancelDeleteButton").setVisible(false);
+        },
+
+        onDeleteSelectedSuppliers: function () {
+            const oTable = this.byId("supplierTable");
+            const aSelectedItems = oTable.getSelectedItems();
+
+            if (aSelectedItems.length === 0) {
+                MessageBox.warning("Please select at least one supplier to delete.");
+                return;
+            }
+
+            const sConfirmationMessage = `Are you sure you want to delete these ${aSelectedItems.length} supplier(s)?`;
+
+            MessageBox.confirm(sConfirmationMessage, {
+                title: "Confirm Deletion",
+                onClose: (sAction) => {
+                    if (sAction === MessageBox.Action.OK) {
+                        this._performDeletion(aSelectedItems);
+                    }
+                }
+            });
+        },
+
+        _performDeletion: function (aItemsToDelete) {
+            const sActionUrl = this.getURL() + "/odata/v4/supplier/deletesuppliers";
+
+            const aPromises = aItemsToDelete.map(oItem => {
+                const oContext = oItem.getBindingContext();
+                const sSupplierKey = oContext.getProperty("supplierName");
+
+                return fetch(sActionUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        supplierName: sSupplierKey
+                    })
+                });
+            });
+
+            Promise.all(aPromises)
+                .then(aResponses => {
+                    const aFailed = aResponses.filter(res => !res.ok);
+                    if (aFailed.length > 0) {
+                        MessageBox.error(`${aFailed.length} deletion(s) failed. Please check the logs and refresh the list.`);
+                    } else {
+                        MessageBox.success(`${aResponses.length} supplier(s) deleted successfully.`);
+                    }
+                })
+                .catch(err => {
+                    MessageBox.error("An error occurred during deletion: " + err.message);
+                })
+                .finally(() => {
+                    this.onCancelDelete();
+                    this._fetchSuppliers();
+                });
+        },
         onFilterSuppliers: function () {
             const oTable = this.byId("supplierTable");
             const oBinding = oTable.getBinding("items");
@@ -111,6 +185,8 @@ sap.ui.define([
                     this.getView().setModel(new JSONModel({
                         suppliers: suppliers
                     }));
+
+                    this.byId("deleteModeButton").setVisible(suppliers && suppliers.length > 0);
                 })
                 .catch(err => {
                     MessageBox.error("Error fetching suppliers: " + err.message);

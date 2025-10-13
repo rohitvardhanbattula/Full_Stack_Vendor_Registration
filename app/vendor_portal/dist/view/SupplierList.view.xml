@@ -28,7 +28,16 @@
         </headerContent>
 
         <content>
-            <Table id="supplierTable" items="{path: '/suppliers'}" itemPress=".onSupplierPress" alternateRowColors="true">
+            <Table id="supplierTable" items="{path: '/suppliers'}" itemPress=".onSupplierPress" alternateRowColors="true" mode="None">
+                <headerToolbar>
+                    <Toolbar>
+                        <ToolbarSpacer />
+                        <Button id="deleteModeButton" text="Delete Suppliers" press=".onDeleteMode" type="Reject" icon="sap-icon://delete" />
+                        <Button id="confirmDeleteButton" text="Confirm" press=".onDeleteSelectedSuppliers" type="Reject" visible="false" />
+                        <Button id="cancelDeleteButton" text="Cancel" press=".onCancelDelete" type="Transparent" visible="false" />
+                    </Toolbar>
+                </headerToolbar>
+
                 <columns>
                     <Column hAlign="Center" minScreenWidth="Tablet" demandPopin="true">
                         <Text text="Name" />
@@ -42,7 +51,7 @@
                     <Column hAlign="Center" minScreenWidth="Tablet" demandPopin="true">
                         <Text text="Status" />
                     </Column>
-                    </columns>
+                </columns>
 
                 <items>
                     <ColumnListItem type="Active">
@@ -59,7 +68,7 @@
                             <HBox fitContainer="true" justifyContent="Center">
                                 <Button text="{status}" type="{ path: 'status', formatter: '.formatStatusType' }"/>
                             </HBox>
-                            </cells>
+                        </cells>
                     </ColumnListItem>
                 </items>
             </Table>

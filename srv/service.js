@@ -550,6 +550,68 @@ module.exports = cds.service.impl(function () {
         
         return `Validation result for field '${field}' has been saved.`;
     });
+
+  this.on('deletesuppliers', async (req) => {
+    const { supplierName } = req.data;
+    if (!supplierName) {
+        return req.error(400, "Missing supplierName in request data.");
+    }
+
+    // Use a transaction to ensure all deletes succeed or none do.
+    const tx = cds.transaction(req);
+
+    try {
+        // Step 1: Find the Supplier to get the foreign keys for associated entities.
+        // We need these because Address, Contact, etc., don't have the 'supplierName' field.
+        const supplier = await tx.read('my.supplier.Supplier')
+            .where({ supplierName: supplierName })
+            .columns([
+                'mainAddress_ID', 
+                'primaryContact_ID', 
+                'categoryAndRegion_ID', 
+                'additionalInfo_ID'
+            ]);
+        if (!supplier) {
+            return req.warn(404, `Supplier '${supplierName}' not found.`);
+        }
+        const deleteBySupplierNamePromises = [
+            tx.delete('my.supplier.Attachment').where({ supplierName: supplierName }),
+            tx.delete('my.supplier.ApproverComment').where({ sup_name: supplierName }),
+            tx.delete('my.supplier.gst').where({ supplierName: supplierName })
+        ];
+
+        await Promise.all(deleteBySupplierNamePromises);
+
+        // Step 3: Delete the associated entities using the IDs we fetched earlier.
+        const deleteByAssociationPromises = [];
+        if (supplier.mainAddress_ID) {
+            deleteByAssociationPromises.push(tx.delete('my.supplier.Address').where({ ID: supplier.mainAddress_ID }));
+        }
+        if (supplier.primaryContact_ID) {
+            deleteByAssociationPromises.push(tx.delete('my.supplier.Contact').where({ ID: supplier.primaryContact_ID }));
+        }
+        if (supplier.categoryAndRegion_ID) {
+            deleteByAssociationPromises.push(tx.delete('my.supplier.CategoryRegion').where({ ID: supplier.categoryAndRegion_ID }));
+        }
+        if (supplier.additionalInfo_ID) {
+            deleteByAssociationPromises.push(tx.delete('my.supplier.AdditionalInfo').where({ ID: supplier.additionalInfo_ID }));
+        }
+
+        if (deleteByAssociationPromises.length > 0) {
+            await Promise.all(deleteByAssociationPromises);
+        }
+
+        // Step 4: Finally, delete the main Supplier record itself.
+        await tx.delete('my.supplier.Supplier').where({ supplierName: supplierName });
+        
+        // If everything was successful, the transaction will be committed automatically.
+        return { message: `Successfully deleted supplier '${supplierName}' and all related data.` };
+
+    } catch (error) {
+        // If any of the delete operations fail, the transaction will be rolled back.
+        req.error(500, `Failed to delete supplier '${supplierName}': ${error.message}`);
+    }
+});
   this.on("downloadAttachments", async (req) => {
     const { supplierName } = req.data;
     if (!supplierName) return req.error(400, "Missing supplierName");
