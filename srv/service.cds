@@ -68,7 +68,7 @@ type GSTApiResponseType {
     data    : GSTDataType;
 }
  
- 
+@unrestricted
 service SupplierService {
  
     function getsuppliers()                                       returns array of SupplierInput;

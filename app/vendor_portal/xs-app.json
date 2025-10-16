@@ -5,30 +5,30 @@
      {
       "source": "^/fetchGSTDetails$",
       "target": "/fetchGSTDetails",
-      "destination": "srv-api",
+      "destination": "vendorportaldest",
       "csrfProtection": false,
-      "authenticationType": "xsuaa"
+      "authenticationType": "none"
     },
      {
       "source": "^/fileextraction$",
       "target": "/fileextraction",
-      "destination": "srv-api",
+      "destination": "vendorportaldest",
       "csrfProtection": false,
-      "authenticationType": "xsuaa"
+      "authenticationType": "none"
     },
     {
       "source": "^/uploadattachments$",
       "target": "/uploadattachments",
-      "destination": "srv-api",
+      "destination": "vendorportaldest",
       "csrfProtection": false,
-      "authenticationType": "xsuaa"
+      "authenticationType": "none"
     },
     {
       "source": "^/?odata/(.*)$",
       "target": "/odata/$1",
-      "destination": "srv-api",
+      "destination": "vendorportaldest",
       "csrfProtection": false,
-      "authenticationType": "xsuaa"
+      "authenticationType": "none"
     },
     {
       "source": "^/resources/(.*)$",
@@ -46,7 +46,7 @@
       "source": "^(.*)$",
       "target": "$1",
       "service": "html5-apps-repo-rt",
-      "authenticationType": "xsuaa"
+      "authenticationType": "none"
     }
   ]
 }

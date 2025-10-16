@@ -1,150 +1,229 @@
-<mvc:View
-    controllerName="vendorportal.controller.SupplierDetail"
+<mvc:View controllerName="vendorportal.controller.SupplierDetail"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
-    xmlns:f="sap.ui.layout.form"
+    xmlns:f="sap.f"
+    xmlns:form="sap.ui.layout.form"
     xmlns:l="sap.ui.layout"
     xmlns:core="sap.ui.core">
 
-    <Page
-        id="supplierDetailPage"
-        title="Supplier Details"
-        showNavButton="true"
-        navButtonPress=".onNavBack"
-        class="sapUiResponsiveContentPadding"> 
-        <headerContent>
-            <ObjectStatus
-                title="Status"
-                text="{status}"
-                state="{= 
-                    ${status} === 'Accepted' || ${status} === 'Approved' ? 'Success' : 
-                    (${status} === 'Rejected' ? 'Error' : 'Warning') 
-                }" />
-        </headerContent>
-        <content>
-            <Panel expandable="true" expanded="true" width="auto" class="sapUiSmallMarginBottom">
-                <headerToolbar>
-                    <Toolbar>
-                        <Title text="Supplier &amp; Address Information" />
-                    </Toolbar>
-                </headerToolbar>
-                <content>
-                    <f:Form editable="false">
-                        <f:layout>
-                            <f:ResponsiveGridLayout
-                                labelSpanXL="4" labelSpanL="4" labelSpanM="12" labelSpanS="12"
-                                columnsXL="2" columnsL="2" columnsM="1"/>
-                        </f:layout>
-                        <f:formContainers>
-                            <f:FormContainer>
-                                <f:formElements>
-                                    <f:FormElement label="SAP Business Partner ID"><f:fields><Text text="{businessPartnerId}"/></f:fields></f:FormElement>
-                                    <f:FormElement label="Supplier Name"><f:fields><Text text="{supplierName}"/></f:fields></f:FormElement>
-                                    <f:FormElement label="First Name"><f:fields><Text text="{primaryContact/firstName}"/></f:fields></f:FormElement>
-                                    <f:FormElement label="Last Name"><f:fields><Text text="{primaryContact/lastName}"/></f:fields></f:FormElement>
-                                    <f:FormElement label="Email"><f:fields><Text text="{primaryContact/email}"/></f:fields></f:FormElement>
-                                    <f:FormElement label="Phone"><f:fields><Text text="{primaryContact/phone}"/></f:fields></f:FormElement>
-                                </f:formElements>
-                            </f:FormContainer>
-                            <f:FormContainer>
-                                <f:formElements>
-                                    <f:FormElement label="Street"><f:fields><Text text="{mainAddress/street}"/></f:fields></f:FormElement>
-                                    <f:FormElement label="City"><f:fields><Text text="{mainAddress/city}"/></f:fields></f:FormElement>
-                                    <f:FormElement label="Postal Code"><f:fields><Text text="{mainAddress/postalCode}"/></f:fields></f:FormElement>
-                                    <f:FormElement label="Country"><f:fields><Text text="{mainAddress/country}"/></f:fields></f:FormElement>
-                                    <f:FormElement label="Region"><f:fields><Text text="{mainAddress/region}"/></f:fields></f:FormElement>
-                                </f:formElements>
-                            </f:FormContainer>
-                        </f:formContainers>
-                    </f:Form>
-                </content>
-            </Panel>
+    <f:DynamicPage id="supplierDynamicPage">
 
-             <Panel expandable="true" expanded="true" width="auto" class="sapUiSmallMarginBottom">
-                <headerToolbar>
-                    <Toolbar>
-                        <Title text="AI &amp; Validation Checks" />
-                    </Toolbar>
-                </headerToolbar>
-                <content>
-                    <l:Grid defaultSpan="XL6 L6 M12 S12" vSpacing="1.5rem">
-                        <VBox>
-                            <Title text="Extracted text through AI" level="H3" class="sapUiSmallMarginBottom"/>
-                            <Text text="{aiExtractedText}" wrapping="true" />
-                        </VBox>
-                        <VBox>
-                            <Title text="GST Validation Checks" level="H3" class="sapUiSmallMarginBottom"/>
-                            <Table
-                                inset="false"
-                                items="{gstValidationModel>/gstChecks}">
-                                <columns>
-                                    <Column width="8rem"><Text text="Field"/></Column>
-                                    <Column width="5rem" hAlign="Center"><Text text="Status"/></Column>
-                                    <Column><Text text="Remarks"/></Column>
-                                </columns>
-                                <items>
-                                    <ColumnListItem>
-                                        <cells>
-                                            <Text text="{gstValidationModel>field}" />
-                                            <core:Icon
-                                                src="{= ${gstValidationModel>status} === 'Success' ? 'sap-icon://accept' : 'sap-icon://decline' }"
-                                                color="{= ${gstValidationModel>status} === 'Success' ? 'Positive' : 'Negative' }"
-                                                size="1.2rem"
-                                                class="sapUiSmallMargin"
-                                                tooltip="{gstValidationModel>status}" />
-                                            <Text text="{gstValidationModel>remarks}" />
-                                        </cells>
-                                    </ColumnListItem>
-                                </items>
-                            </Table>
-                        </VBox>
-                    </l:Grid>
-                </content>
-            </Panel>
+        <f:title>
+            <f:DynamicPageTitle>
+                <f:heading>
+                    <HBox alignItems="Center" wrap="Wrap">
+                        <Button icon="sap-icon://nav-back" type="Transparent" press=".onNavBack" class="sapUiTinyMarginEnd" />
+                        <Title text="{supplierName}" wrapping="true"/>
+                    </HBox>
 
-            <Panel expandable="true" expanded="true" width="auto" class="sapUiSmallMarginBottom">
-                 <headerToolbar>
-                    <Toolbar>
-                        <Title text="Attachments" />
-                    </Toolbar>
-                </headerToolbar>
-                <content>
-                    <Table id="attachmentsTable" items="{attachmentsModel>/attachments}">
-                        <columns>
-                            <Column><Text text="File Name"/></Column>
-                            <Column><Text text="File Type"/></Column>
-                            <Column><Text text="File Size(KB)"/></Column>
-                            <Column><Text text="Uploaded At"/></Column>
-                            <Column><Text text="Actions"/></Column>
-                        </columns>
-                        <items>
-                            <ColumnListItem><cells><Text text="{attachmentsModel>fileName}"/><Text text="{ path: 'attachmentsModel>mimeType', formatter: '.formatMimeType'}"/><Text text="{attachmentsModel>filesize}"/><Text text="{attachmentsModel>uploadedAt}"/><Button text="Download" icon="sap-icon://download" type="Emphasized" press="onDownloadAttachment"/></cells></ColumnListItem>
-                        </items>
-                    </Table>
-                </content>
-            </Panel>
-            
-            <Panel expandable="true" expanded="true" width="auto" class="sapUiSmallMarginBottom">
-                <headerToolbar>
-                    <Toolbar>
-                        <Title text="Approval Status" />
-                    </Toolbar>
-                </headerToolbar>
-                <content>
-                    <Table id="statusTable" items="{statusModel>/status}">
-                        <columns>
-                            <Column><Text text="Step"/></Column>
-                            <Column><Text text="Approver Name"/></Column>
-                            <Column><Text text="Comments"/></Column>
-                            <Column><Text text="Status"/></Column>
-                        </columns>
-                        <items>
-                            <ColumnListItem><cells><Text text="{statusModel>level}" /><Text text="{statusModel>name}" /><Text text="{statusModel>comment}" /><ObjectStatus text="{statusModel>status}" state="{= ${statusModel>status} === 'Approved' ? 'Success' : (${statusModel>status} === 'Rejected' ? 'Error' : 'Warning') }"/></cells></ColumnListItem>
-                        </items>
-                    </Table>
-                </content>
-            </Panel>
+                </f:heading>
+            </f:DynamicPageTitle>
+        </f:title>
 
-        </content>
-    </Page>
+        <f:header>
+            <f:DynamicPageHeader pinnable="true">
+                <FlexBox wrap="Wrap" fitContainer="true" alignItems="Start">
+                    <VBox class="sapUiSmallMarginEnd sapUiSmallMarginBottom">
+                        <Label text="Status"/>
+                        <ObjectStatus text="{status}" state="{= ${status} === 'APPROVED' ? 'Success' : (${status} === 'REJECTED' ? 'Error' : 'Warning') }" class="sapMObjectStatusLarge" />
+                    </VBox>
+                    <VBox class="sapUiSmallMarginEnd sapUiSmallMarginBottom">
+                        <Label text="SAP Business Partner ID"/>
+                        <Text text="{businessPartnerId}" class="sapMFontHeader4"/>
+                    </VBox>
+                </FlexBox>
+            </f:DynamicPageHeader>
+        </f:header>
+
+        <f:content>
+            <VBox class="sapUiSmallMargin">
+                <Panel expandable="true" expanded="true" width="auto" class="sapUiResponsiveMargin sapUiNoContentPadding">
+                    <headerToolbar>
+                        <Toolbar>
+                            <Title text="Supplier &amp; Address Information" />
+                        </Toolbar>
+                    </headerToolbar>
+                    <content>
+                        <form:Form editable="false">
+                            <form:layout>
+                                <form:ResponsiveGridLayout labelSpanXL="4" labelSpanL="4" labelSpanM="12" labelSpanS="12" columnsXL="2" columnsL="2" columnsM="1"/>
+                            </form:layout>
+                            <form:formContainers>
+                                <form:FormContainer title="Contact Details">
+                                    <form:formElements>
+                                        <form:FormElement label="First Name">
+                                            <form:fields>
+                                                <Text text="{primaryContact/firstName}"/>
+                                            </form:fields>
+                                        </form:FormElement>
+                                        <form:FormElement label="Last Name">
+                                            <form:fields>
+                                                <Text text="{primaryContact/lastName}"/>
+                                            </form:fields>
+                                        </form:FormElement>
+                                        <form:FormElement label="Email">
+                                            <form:fields>
+                                                <Text text="{primaryContact/email}"/>
+                                            </form:fields>
+                                        </form:FormElement>
+                                        <form:FormElement label="Phone">
+                                            <form:fields>
+                                                <Text text="{primaryContact/phone}"/>
+                                            </form:fields>
+                                        </form:FormElement>
+                                    </form:formElements>
+                                </form:FormContainer>
+                                <form:FormContainer title="Address">
+                                    <form:formElements>
+                                        <form:FormElement label="Street">
+                                            <form:fields>
+                                                <Text text="{mainAddress/street}"/>
+                                            </form:fields>
+                                        </form:FormElement>
+                                        <form:FormElement label="City">
+                                            <form:fields>
+                                                <Text text="{mainAddress/city}"/>
+                                            </form:fields>
+                                        </form:FormElement>
+                                        <form:FormElement label="Postal Code">
+                                            <form:fields>
+                                                <Text text="{mainAddress/postalCode}"/>
+                                            </form:fields>
+                                        </form:FormElement>
+                                        <form:FormElement label="Country">
+                                            <form:fields>
+                                                <Text text="{mainAddress/country}"/>
+                                            </form:fields>
+                                        </form:FormElement>
+                                        <form:FormElement label="Region">
+                                            <form:fields>
+                                                <Text text="{mainAddress/region}"/>
+                                            </form:fields>
+                                        </form:FormElement>
+                                    </form:formElements>
+                                </form:FormContainer>
+                            </form:formContainers>
+                        </form:Form>
+                    </content>
+                </Panel>
+
+                <Panel expandable="true" expanded="false" width="auto" class="sapUiResponsiveMargin sapUiNoContentPadding">
+                    <headerToolbar>
+                        <Toolbar>
+                            <Title text="AI &amp; Validation Checks" />
+                        </Toolbar>
+                    </headerToolbar>
+                    <content>
+                        <l:Grid defaultSpan="XL6 L6 M12 S12" vSpacing="1.5rem" class="sapUiSmallMargin">
+                            <VBox>
+                                <Title text="Extracted text through AI" level="H3" class="sapUiSmallMarginBottom"/>
+                                <Text text="{aiExtractedText}" wrapping="true" />
+                            </VBox>
+                            <VBox>
+                                <Title text="GST Validation Checks" level="H3" class="sapUiSmallMarginBottom"/>
+                                <Table items="{gstValidationModel>/gstChecks}" inset="false">
+                                    <columns>
+                                        <Column width="8rem" hAlign="Center">
+                                            <Text text="Field"/>
+                                        </Column>
+                                        <Column width="5rem" hAlign="Center">
+                                            <Text text="Status"/>
+                                        </Column>
+                                        <Column hAlign="Center">
+                                            <Text text="Remarks"/>
+                                        </Column>
+                                    </columns>
+                                    <items>
+                                        <ColumnListItem>
+                                            <cells>
+                                                <Text text="{gstValidationModel>field}" />
+                                                <core:Icon src="{= ${gstValidationModel>status} === 'Success' ? 'sap-icon://accept' : 'sap-icon://decline' }" color="{= ${gstValidationModel>status} === 'Success' ? 'Positive' : 'Negative' }" tooltip="{gstValidationModel>status}" />
+                                                <Text text="{gstValidationModel>remarks}" />
+                                            </cells>
+                                        </ColumnListItem>
+                                    </items>
+                                </Table>
+                            </VBox>
+                        </l:Grid>
+                    </content>
+                </Panel>
+
+                <Panel expandable="true" expanded="false" width="auto" class="sapUiResponsiveMargin sapUiNoContentPadding">
+                    <headerToolbar>
+                        <Toolbar>
+                            <Title text="Attachments" />
+                        </Toolbar>
+                    </headerToolbar>
+                    <content>
+                        <Table id="attachmentsTable" items="{attachmentsModel>/attachments}">
+                            <columns>
+                                <Column hAlign="Center">
+                                    <Text text="File Name"/>
+                                </Column>
+                                <Column hAlign="Center">
+                                    <Text text="File Type"/>
+                                </Column>
+                                <Column hAlign="Center">
+                                    <Text text="File Size (KB)"/>
+                                </Column>
+                                <Column hAlign="Center">
+                                    <Text text="Uploaded At"/>
+                                </Column>
+                                <Column hAlign="Center">
+                                    <Text text="Actions"/>
+                                </Column>
+                            </columns>
+                            <items>
+                                <ColumnListItem>
+                                    <cells>
+                                        <Text text="{attachmentsModel>fileName}"/>
+                                        <Text text="{ path: 'attachmentsModel>mimeType', formatter: '.formatMimeType'}"/>
+                                        <Text text="{attachmentsModel>filesize}"/>
+                                        <Text text="{attachmentsModel>uploadedAt}"/>
+                                        <Button icon="sap-icon://download" type="Transparent" press=".onDownloadAttachment"/>
+                                    </cells>
+                                </ColumnListItem>
+                            </items>
+                        </Table>
+                    </content>
+                </Panel>
+
+                <Panel expandable="true" expanded="false" width="auto" class="sapUiResponsiveMargin sapUiNoContentPadding">
+                    <headerToolbar>
+                        <Toolbar>
+                            <Title text="Approval History" />
+                        </Toolbar>
+                    </headerToolbar>
+                    <content>
+                        <Table id="statusTable" items="{statusModel>/status}">
+                            <columns>
+                                <Column hAlign="Center">
+                                    <Text text="Step"/>
+                                </Column>
+                                <Column hAlign="Center">
+                                    <Text text="Approver Name"/>
+                                </Column>
+                                <Column hAlign="Center">
+                                    <Text text="Comments"/>
+                                </Column>
+                                <Column hAlign="Center">
+                                    <Text text="Status"/>
+                                </Column>
+                            </columns>
+                            <items>
+                                <ColumnListItem>
+                                    <cells>
+                                        <Text text="{statusModel>level}" />
+                                        <Text text="{statusModel>name}" />
+                                        <Text text="{statusModel>comment}" />
+                                        <ObjectStatus text="{statusModel>status}" state="{= ${statusModel>status} === 'Approved' ? 'Success' : (${statusModel>status} === 'Rejected' ? 'Error' : 'Warning') }"/>
+                                    </cells>
+                                </ColumnListItem>
+                            </items>
+                        </Table>
+                    </content>
+                </Panel>
+            </VBox>
+        </f:content>
+    </f:DynamicPage>
 </mvc:View>

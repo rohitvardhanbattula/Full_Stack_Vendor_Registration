@@ -1,77 +1,96 @@
-<mvc:View xmlns:mvc="sap.ui.core.mvc"
+<mvc:View controllerName="vendorportal.controller.SupplierList"
+    xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
-    xmlns:core="sap.ui.core" controllerName="vendorportal.controller.SupplierList">
+    xmlns:f="sap.f"
+    xmlns:fb="sap.ui.comp.filterbar"
+    xmlns:core="sap.ui.core">
+    <f:DynamicPage id="dynamicSupplierPage" toggleHeaderOnTitleClick="true">
+        <f:title>
+            <f:DynamicPageTitle>
+                <f:heading>
+                    <HBox alignItems="Center" wrap="Wrap">
+                        <Button icon="sap-icon://nav-back" type="Transparent" press=".onNavBack" class="sapUiTinyMarginEnd" />
+                        <Title text="Suppliers"/>
+                    </HBox>
+                </f:heading>
 
-    <Page id="supplierPage" title="Suppliers" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
+                <f:actions>
+                    <Button text="Reset Filters" type="Transparent" press=".onClearFilters" />
+                </f:actions>
+            </f:DynamicPageTitle>
+        </f:title>
 
-        <headerContent>
-            <Toolbar >
-                <Label text="Name" labelFor="filterName" />
-                <SearchField id="filterName" width="150px" liveChange=".onFilterSuppliers" />
+        <f:header>
+            <f:DynamicPageHeader pinnable="true">
+                
+                    <fb:FilterBar id="filterbar" persistencyKey="supplierFilter" search=".onFilterSuppliers">
+                        <fb:filterGroupItems>
+                            <fb:FilterGroupItem name="Name" label="Name" groupName="Group1" visibleInFilterBar="true">
+                                <fb:control>
+                                    <Input id="filterName" />
+                                </fb:control>
+                            </fb:FilterGroupItem>
+                            <fb:FilterGroupItem name="City" label="City" groupName="Group1" visibleInFilterBar="true">
+                                <fb:control>
+                                    <Input id="filterCity" />
+                                </fb:control>
+                            </fb:FilterGroupItem>
+                            <fb:FilterGroupItem name="Status" label="Status" groupName="Group1" visibleInFilterBar="true">
+                                <fb:control>
+                                    <Select id="filterStatus" width="100%">
+                                        <core:Item key="" text="All"/>
+                                        <core:Item key="APPROVED" text="Approved"/>
+                                        <core:Item key="REJECTED" text="Rejected"/>
+                                        <core:Item key="PENDING" text="Pending"/>
+                                    </Select>
+                                </fb:control>
+                            </fb:FilterGroupItem>
+                        </fb:filterGroupItems>
+                    </fb:FilterBar>
+                
+            </f:DynamicPageHeader>
+        </f:header>
 
-                <Label text="City" labelFor="filterCity" />
-                <SearchField id="filterCity" width="150px" liveChange=".onFilterSuppliers" />
-
-                <Label text="Status" labelFor="filterStatus" />
-                <Select id="filterStatus" change=".onFilterSuppliers" width="150px">
-                    <items>
-                        <core:Item key="" text="All" />
-                        <core:Item key="APPROVED" text="Approved" />
-                        <core:Item key="REJECTED" text="Rejected" />
-                        <core:Item key="PENDING" text="Pending" />
-                    </items>
-                </Select>
-
-                <ToolbarSpacer />
-                <Button text="Clear Filters" press=".onClearFilters" type="Transparent" />
-            </Toolbar>
-        </headerContent>
-
-        <content>
-            <Table id="supplierTable" items="{path: '/suppliers'}" itemPress=".onSupplierPress" alternateRowColors="true" mode="None">
-                <headerToolbar>
-                    <Toolbar>
-                        <ToolbarSpacer />
-                        <Button id="deleteModeButton" text="Delete Suppliers" press=".onDeleteMode" type="Reject" icon="sap-icon://delete" visible="false" />
-                        <Button id="confirmDeleteButton" text="Confirm" press=".onDeleteSelectedSuppliers" type="Reject" visible="false" />
-                        <Button id="cancelDeleteButton" text="Cancel" press=".onCancelDelete" type="Transparent" visible="false" />
-                    </Toolbar>
-                </headerToolbar>
-
-                <columns>
-                    <Column hAlign="Center" minScreenWidth="Tablet" demandPopin="true">
-                        <Text text="Name" />
-                    </Column>
-                    <Column hAlign="Center" minScreenWidth="Tablet" demandPopin="true">
-                        <Text text="City" />
-                    </Column>
-                    <Column hAlign="Center" minScreenWidth="Desktop" demandPopin="false">
-                        <Text text="Contact Email" />
-                    </Column>
-                    <Column hAlign="Center" minScreenWidth="Tablet" demandPopin="true">
-                        <Text text="Status" />
-                    </Column>
-                </columns>
-
-                <items>
-                    <ColumnListItem type="Active">
-                        <cells>
-                            <HBox fitContainer="true" justifyContent="Center">
-                                <Text text="{supplierName}" />
-                            </HBox>
-                            <HBox fitContainer="true" justifyContent="Center">
-                                <Text text="{mainAddress/city}" />
-                            </HBox>
-                            <HBox fitContainer="true" justifyContent="Center">
-                                <Text text="{primaryContact/email}" />
-                            </HBox>
-                            <HBox fitContainer="true" justifyContent="Center">
-                                <Button text="{status}" type="{ path: 'status', formatter: '.formatStatusType' }"/>
-                            </HBox>
-                        </cells>
-                    </ColumnListItem>
-                </items>
-            </Table>
-        </content>
-    </Page>
+        <f:content>
+            <Panel class="sapUiResponsiveMargin" width="auto" backgroundDesign="Solid">
+                <content>
+                    <Table id="supplierTable" items="{path: 'supplierModel>/suppliers'}" itemPress=".onSupplierPress" alternateRowColors="true" mode="None">
+                        <headerToolbar>
+                            <Toolbar>
+                                <Title id="tableHeader" text="{= 'Suppliers (' + (${supplierModel>/suppliers} ? ${supplierModel>/suppliers}.length : 0) + ')' }"/>
+                                <ToolbarSpacer/>
+                                <Button id="deleteModeButton" text="Delete Suppliers" press=".onDeleteMode" type="Reject" icon="sap-icon://delete" visible="false"/>
+                                <Button id="confirmDeleteButton" text="Confirm" press=".onDeleteSelectedSuppliers" type="Reject" visible="false"/>
+                                <Button id="cancelDeleteButton" text="Cancel" press=".onCancelDelete" type="Transparent" visible="false"/>
+                            </Toolbar>
+                        </headerToolbar>
+                        <columns>
+                            <Column>
+                                <Text text="Name"/>
+                            </Column>
+                            <Column minScreenWidth="Tablet" demandPopin="true">
+                                <Text text="City"/>
+                            </Column>
+                            <Column minScreenWidth="Desktop" demandPopin="false">
+                                <Text text="Contact Email"/>
+                            </Column>
+                            <Column hAlign="Center" minScreenWidth="Tablet" demandPopin="true">
+                                <Text text="Status"/>
+                            </Column>
+                        </columns>
+                        <items>
+                            <ColumnListItem type="Navigation" vAlign="Middle">
+                                <cells>
+                                    <Text text="{supplierModel>supplierName}"/>
+                                    <Text text="{supplierModel>mainAddress/city}"/>
+                                    <Text text="{supplierModel>primaryContact/email}"/>
+                                    <ObjectStatus text="{supplierModel>status}" state="{ path: 'supplierModel>status', formatter: '.formatStatusState' }"/>
+                                </cells>
+                            </ColumnListItem>
+                        </items>
+                    </Table>
+                </content>
+            </Panel>
+        </f:content>
+    </f:DynamicPage>
 </mvc:View>

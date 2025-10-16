@@ -283,7 +283,7 @@ sap.ui.define([
                     const formData = new FormData();
                     formData.append("supplierName", oData.supplierName);
                     aUploadedFiles.forEach(f => formData.append("files", f.file));
-                    await fetch(this.getURL() + `/uploadattachments`, {
+                    await fetch( this.getURL()+ `/uploadattachments`, {
                         method: "POST",
                         body: formData
                     });
@@ -309,7 +309,7 @@ sap.ui.define([
             try {
                 const formData = new FormData();
                 formData.append('file', file);
-                const response = await fetch(this.getURL() + '/fileextraction', { method: 'POST', body: formData });
+                const response = await fetch(this.getURL()+ '/fileextraction', { method: 'POST', body: formData });
 
                 if (!response.ok) {
                     const errData = await response.json();
@@ -325,17 +325,15 @@ sap.ui.define([
         },
 
         _validateGST: async function (gstin, supplierData) {
-            // Helper function to clean strings for a better comparison
             const normalizeString = (sValue) => {
                 if (!sValue) {
                     return "";
                 }
-                // Converts to lowercase and removes all spaces, periods, and commas
                 return sValue.toLowerCase().replace(/[\s.,]/g, '');
             };
 
             try {
-                const response = await fetch(this.getURL() + '/fetchGSTDetails', {
+                const response = await fetch( this.getURL()+ '/fetchGSTDetails', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ gstin: gstin })
